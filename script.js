@@ -43,14 +43,79 @@ const outputDevices =
 // 1. Lưu Ngưỡng Cảnh Báo (Dùng hàm set và ref mới)
 saveTempBtn.addEventListener('click', () => {
     let newVal = parseFloat(tempThresholdInput.value);
-    set(ref(db, 'settings/temp_threshold'), newVal)
-        .then(() => alert(`Temperature threshold has been saved: ${newVal}°C to Firebase`));
+
+    switch (true) {
+        case (isNaN(newVal)):
+            alert("Lỗi: Vui lòng nhập một con số hợp lệ!");
+            tempThresholdInput.focus();
+            break;
+            
+        case (newVal < 0 || newVal > 100):
+            alert("Lỗi: Ngưỡng Nhiệt độ chỉ được phép nằm trong khoảng từ 0 đến 100 °C!");
+            tempThresholdInput.value = ""; // Xóa trắng để người dùng nhập lại
+            tempThresholdInput.focus();
+            break;
+            
+        default:
+            // Dữ liệu hợp lệ, cho phép gửi lên Firebase
+            set(ref(db, 'settings/temp_threshold'), newVal)
+                .then(() => alert(`Temperature threshold has been saved: ${newVal}°C to Firebase`));
+            break;
+    }
 });
 
 saveGasBtn.addEventListener('click', () => {
     let newVal = parseFloat(gasThresholdInput.value);
-    set(ref(db, 'settings/gas_threshold'), newVal)
-        .then(() => alert(`Gas threshold has been saved: ${newVal} ppm to Firebase`));
+
+    switch (true) {
+        case (isNaN(newVal)):
+            alert("Lỗi: Vui lòng nhập một con số hợp lệ!");
+            gasThresholdInput.focus();
+            break;
+            
+        case (newVal < 0 || newVal > 1000):
+            alert("Lỗi: Ngưỡng Khí Gas chỉ được phép nằm trong khoảng từ 0 đến 1000 ppm!");
+            gasThresholdInput.value = ""; // Xóa trắng để người dùng nhập lại
+            gasThresholdInput.focus();
+            break;
+            
+        default:
+            // Dữ liệu hợp lệ, cho phép gửi lên Firebase
+            set(ref(db, 'settings/gas_threshold'), newVal)
+                .then(() => alert(`Gas threshold has been saved: ${newVal} ppm to Firebase`));
+            break;
+    }
+});
+// Hiệu ứng đổi màu viền ô nhập Nhiệt độ khi nhập sai
+tempThresholdInput.addEventListener('input', function() {
+    let val = parseFloat(this.value);
+    switch (true) {
+        case (val < 0 || val > 100):
+            this.style.borderColor = "red";
+            this.style.color = "red";
+            this.style.outline = "none";
+            break;
+        default:
+            this.style.borderColor = "#ccc"; // Trả lại màu viền bình thường
+            this.style.color = "inherit";
+            break;
+    }
+});
+
+// Hiệu ứng đổi màu viền ô nhập Khí Gas khi nhập sai
+gasThresholdInput.addEventListener('input', function() {
+    let val = parseFloat(this.value);
+    switch (true) {
+        case (val < 0 || val > 1000):
+            this.style.borderColor = "red";
+            this.style.color = "red";
+            this.style.outline = "none";
+            break;
+        default:
+            this.style.borderColor = "#ccc"; // Trả lại màu viền bình thường
+            this.style.color = "inherit";
+            break;
+    }
 });
 
 // 2. Chuyển đổi Chế độ Auto/Manual
