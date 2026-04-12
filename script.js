@@ -46,12 +46,12 @@ saveTempBtn.addEventListener('click', () => {
 
     switch (true) {
         case (isNaN(newVal)):
-            alert("Lỗi: Vui lòng nhập một con số hợp lệ!");
+            alert("Error: Please enter a valid number!");
             tempThresholdInput.focus();
             break;
             
         case (newVal < 0 || newVal > 100):
-            alert("Lỗi: Ngưỡng Nhiệt độ chỉ được phép nằm trong khoảng từ 0 đến 100 °C!");
+            alert("Error: The temperature threshold must be within the range of 0 to 100 °C!");
             tempThresholdInput.value = ""; // Xóa trắng để người dùng nhập lại
             tempThresholdInput.focus();
             break;
@@ -69,12 +69,12 @@ saveGasBtn.addEventListener('click', () => {
 
     switch (true) {
         case (isNaN(newVal)):
-            alert("Lỗi: Vui lòng nhập một con số hợp lệ!");
+            alert("Error: Please enter a valid number!");
             gasThresholdInput.focus();
             break;
             
         case (newVal < 0 || newVal > 1000):
-            alert("Lỗi: Ngưỡng Khí Gas chỉ được phép nằm trong khoảng từ 0 đến 1000 ppm!");
+            alert("Error: The gas threshold must be within the range of 0 to 1000 ppm!");
             gasThresholdInput.value = ""; // Xóa trắng để người dùng nhập lại
             gasThresholdInput.focus();
             break;
