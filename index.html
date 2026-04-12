@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fire Alarm</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="dashboard">
+    <h2>🔥 SMART FIRE ALARM SYSTEM 🔥</h2>
+
+    <div class="mode-panel">
+        <h3>System Mode</h3>
+        <select id="modeSelect" class="mode-dropdown mode-auto">
+            <option value="auto">AUTO</option>
+            <option value="manual">MANUAL</option>
+        </select>
+        <p class="note">Note: Manual mode is only used for testing and maintenance system.</p>
+    </div>
+
+    <h3 class="section-title">⚙️ Set Alert Threshold</h3>
+    <div class="grid-container">
+        <div class="card threshold-card">
+            <h4>Temperature threshold</h4>
+            <div class="input-group">
+                <input type="number" id="tempThresholdInput" value="50" min="0" max="100">
+                <span class="unit">°C</span>
+                <button id="saveTempBtn" class="btn-save">Save</button>
+            </div>
+            <div class="note-small">(System will activate when this level is exceeded)</div>
+        </div>
+        
+        <div class="card threshold-card">
+            <h4>Gas threshold</h4>
+            <div class="input-group">
+                <input type="number" id="gasThresholdInput" value="600" min="0" max="1000">
+                <span class="unit">ppm</span>
+                <button id="saveGasBtn" class="btn-save">Save</button>
+            </div>
+            <div class="note-small">(System will activate when this level is exceeded)</div>
+        </div>
+    </div>
+
+    <h3 class="section-title">📊 Sensor Data</h3>
+    <div class="grid-container">
+        <div class="card">
+            <h3>Fire</h3>
+            <div id="fireBadge" class="badge safety">No Data</div>
+        </div>
+        <div class="card">
+            <h3>Temperature</h3>
+            <p><span id="tempValue">--</span><span class="unit-large"> °C</span></p>
+        </div>
+        <div class="card">
+            <h3>Gas</h3>
+            <p><span id="gasValue">--</span><span class="unit-large"> ppm</span></p>
+        </div>
+    </div>
+
+    <h3 class="section-title">📤 Output Data</h3>
+    <div class="grid-container actuator-panel locked" id="actuatorPanel">
+        <div class="card actuator">
+            <h3>Alarm Led</h3>
+            <label class="switch"><input type="checkbox" id="toggleLed" disabled><span class="slider"></span></label>
+        </div>
+        <div class="card actuator">
+            <h3>Buzzer</h3>
+            <label class="switch"><input type="checkbox" id="toggleBuzzer" disabled><span class="slider"></span></label>
+        </div>
+        <div class="card actuator">
+            <h3>Relay 1 (Fan)</h3>
+            <label class="switch"><input type="checkbox" id="toggleRelay1" disabled><span class="slider"></span></label>
+        </div>
+        <div class="card actuator">
+            <h3>Relay 2 (Pump)</h3>
+            <label class="switch"><input type="checkbox" id="toggleRelay2" disabled><span class="slider"></span></label>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="script.js"></script>
+</body>
+</html>
+
+
+
+
