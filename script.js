@@ -150,7 +150,7 @@ onValue(ref(db, 'sensors/gas'), (snapshot) => {
 
 onValue(ref(db, 'sensors/fire'), (snapshot) => {
     let isFire = snapshot.val(); 
-    if (isFire === 1 || isFire === true) {
+    if (isFire === 0 || isFire === false) {
         fireBadge.textContent = 'Danger';
         fireBadge.className = 'badge danger';
     } else {
