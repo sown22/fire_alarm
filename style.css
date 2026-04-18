@@ -229,3 +229,40 @@ input:disabled + .slider { cursor: not-allowed; opacity: 0.6; }
 
 .btn-save:hover { background-color: #0b7dda; }
 .btn-save:active { transform: scale(0.95); }
+/*Dong ho */
+.top-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--card-bg);
+    padding: 15px 25px;
+    border-radius: 22px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.greeting {
+    font-size: 1.2em;
+    font-weight: 700;
+    color: #222;
+}
+
+.clock {
+    text-align: right;
+}
+
+.time-text {
+    display: block;
+    font-size: 1.4em;
+    font-weight: bold;
+    color: #222;
+    letter-spacing: 1px;
+}
+
+.date-text {
+    display: block;
+    font-size: 0.85em;
+    color: #777;
+    font-weight: 600;
+    margin-top: 2px;
+}

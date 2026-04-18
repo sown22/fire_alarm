@@ -191,3 +191,37 @@ Object.keys(outputDevices).forEach(key => {
         outputDevices[key].checked = (state === 'ON' || state === 1 || state === true);
     });
 });
+
+function updateClockAndGreeting() {
+    const ownerName = "sown"; // BẠN CÓ THỂ ĐỔI TÊN CHỦ NHÀ Ở ĐÂY
+
+    const now = new Date();
+    const hours = now.getHours();
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0'); // Tháng bắt đầu từ 0
+    const year = now.getFullYear();
+
+    // 1. Cập nhật câu chào theo khung giờ
+    let greetingText = "";
+    if (hours >= 5 && hours < 12) {
+        greetingText = `🌅 Good morning, ${ownerName}!`;
+    } else if (hours >= 12 && hours < 18) {
+        greetingText = `☀️ Good afternoon, ${ownerName}!`;
+    } else {
+        greetingText = `🌙 Good evening, ${ownerName}!`;
+    }
+    document.getElementById('greeting').innerText = greetingText;
+
+    // 2. Cập nhật đồng hồ (Giờ và Ngày)
+    document.getElementById('timeText').innerText = `${hours}:${minutes}:${seconds}`;
+    document.getElementById('dateText').innerText = `${day}/${month}/${year}`;
+}
+
+// Chạy hàm ngay lập tức khi load trang để tránh bị delay 1 giây đầu
+updateClockAndGreeting();
+
+// Thiết lập vòng lặp chạy hàm này mỗi 1000ms (1 giây)
+setInterval(updateClockAndGreeting, 1000)
