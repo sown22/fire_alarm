@@ -1,6 +1,5 @@
 // Import các module cần thiết từ Firebase v10
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-// QUAN TRỌNG: Phải import thêm hàm 'set' để ghi dữ liệu
 import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
 const firebaseConfig = 
@@ -40,10 +39,9 @@ const outputDevices =
 // PHẦN 3: GỬI LỆNH TỪ WEB LÊN FIREBASE (WRITE)
 // =========================================================
 
-// 1. Lưu Ngưỡng Cảnh Báo (Dùng hàm set và ref mới)
+// 1. Lưu Ngưỡng Cảnh Báo
 saveTempBtn.addEventListener('click', () => {
     let newVal = parseFloat(tempThresholdInput.value);
-
     switch (true) {
         case (isNaN(newVal)):
             alert("Error: Please enter a valid number!");
@@ -52,12 +50,11 @@ saveTempBtn.addEventListener('click', () => {
             
         case (newVal < 0 || newVal > 100):
             alert("Error: The temperature threshold must be within the range of 0 to 100 °C!");
-            tempThresholdInput.value = ""; // Xóa trắng để người dùng nhập lại
+            tempThresholdInput.value = ""; 
             tempThresholdInput.focus();
             break;
             
         default:
-            // Dữ liệu hợp lệ, cho phép gửi lên Firebase
             set(ref(db, 'settings/temp_threshold'), newVal)
                 .then(() => alert(`Temperature threshold has been saved: ${newVal}°C to Firebase`));
             break;
@@ -66,7 +63,6 @@ saveTempBtn.addEventListener('click', () => {
 
 saveGasBtn.addEventListener('click', () => {
     let newVal = parseFloat(gasThresholdInput.value);
-
     switch (true) {
         case (isNaN(newVal)):
             alert("Error: Please enter a valid number!");
@@ -75,46 +71,33 @@ saveGasBtn.addEventListener('click', () => {
             
         case (newVal < 0 || newVal > 1000):
             alert("Error: The gas threshold must be within the range of 0 to 1000 ppm!");
-            gasThresholdInput.value = ""; // Xóa trắng để người dùng nhập lại
+            gasThresholdInput.value = ""; 
             gasThresholdInput.focus();
             break;
             
         default:
-            // Dữ liệu hợp lệ, cho phép gửi lên Firebase
             set(ref(db, 'settings/gas_threshold'), newVal)
                 .then(() => alert(`Gas threshold has been saved: ${newVal} ppm to Firebase`));
             break;
     }
 });
-// Hiệu ứng đổi màu viền ô nhập Nhiệt độ khi nhập sai
+
+// Hiệu ứng đổi màu viền ô nhập
 tempThresholdInput.addEventListener('input', function() {
     let val = parseFloat(this.value);
-    switch (true) {
-        case (val < 0 || val > 100):
-            this.style.borderColor = "red";
-            this.style.color = "red";
-            this.style.outline = "none";
-            break;
-        default:
-            this.style.borderColor = "#ccc"; // Trả lại màu viền bình thường
-            this.style.color = "inherit";
-            break;
+    if (val < 0 || val > 100) {
+        this.style.borderColor = "red"; this.style.color = "red"; this.style.outline = "none";
+    } else {
+        this.style.borderColor = "#ccc"; this.style.color = "inherit";
     }
 });
 
-// Hiệu ứng đổi màu viền ô nhập Khí Gas khi nhập sai
 gasThresholdInput.addEventListener('input', function() {
     let val = parseFloat(this.value);
-    switch (true) {
-        case (val < 0 || val > 1000):
-            this.style.borderColor = "red";
-            this.style.color = "red";
-            this.style.outline = "none";
-            break;
-        default:
-            this.style.borderColor = "#ccc"; // Trả lại màu viền bình thường
-            this.style.color = "inherit";
-            break;
+    if (val < 0 || val > 1000) {
+        this.style.borderColor = "red"; this.style.color = "red"; this.style.outline = "none";
+    } else {
+        this.style.borderColor = "#ccc"; this.style.color = "inherit";
     }
 });
 
@@ -124,7 +107,7 @@ modeSelect.addEventListener('change', function() {
     set(ref(db, 'system/mode'), selectedMode);
 });
 
-// 3. Bật/Tắt thiết bị (Chỉ gửi khi đang ở Manual)
+// 3. Bật/Tắt thiết bị
 Object.keys(outputDevices).forEach(key => {
     outputDevices[key].addEventListener('change', function() {
         if (modeSelect.value === 'manual') { 
@@ -138,34 +121,61 @@ Object.keys(outputDevices).forEach(key => {
 // PHẦN 4: LẮNG NGHE DỮ LIỆU TỪ FIREBASE ĐỔ VỀ (READ)
 // =========================================================
 
-// 1. Lắng nghe thông số Cảm biến (Dùng hàm onValue và ref mới)
-// Lưu ý: Tôi đã đổi 'sensors/temp' thành 'sensors/temperature' cho đúng cấu trúc JSON
+// --- BIẾN TOÀN CỤC LƯU TRẠNG THÁI HIỆN TẠI ĐỂ KIỂM TRA BÁO ĐỘNG ---
+let currentTemp = 0;
+let currentGas = 0;
+let currentFire = 1; // Mặc định 1 là an toàn
+let thTemp = 50;
+let thGas = 600;
+
+// HÀM KIỂM TRA BÁO ĐỘNG VÀ NHÁY MÀN HÌNH
+function checkDangerState() {
+    let isDanger = (currentFire === 0 || currentTemp >= thTemp || currentGas >= thGas);
+    
+    // Nếu có nguy hiểm thì thêm class 'danger-mode', nếu an toàn thì gỡ bỏ
+    document.body.classList.toggle('danger-mode', isDanger);
+}
+
+// 1. Lắng nghe thông số Cảm biến 
 onValue(ref(db, 'sensors/temperature'), (snapshot) => {
-    tempValueDisplay.textContent = snapshot.val() || 0;
+    currentTemp = snapshot.val() || 0;
+    tempValueDisplay.textContent = currentTemp;
+    checkDangerState(); // Gọi hàm kiểm tra ngay khi cập nhật
 });
 
 onValue(ref(db, 'sensors/gas'), (snapshot) => {
-    gasValueDisplay.textContent = snapshot.val() || 0;
+    currentGas = snapshot.val() || 0;
+    gasValueDisplay.textContent = currentGas;
+    checkDangerState();
 });
 
 onValue(ref(db, 'sensors/fire'), (snapshot) => {
-    let isFire = snapshot.val(); 
-    if (isFire === 0 || isFire === false) {
+    currentFire = snapshot.val(); 
+    if (currentFire === 0 || currentFire === false) {
         fireBadge.textContent = 'Danger';
         fireBadge.className = 'badge danger';
     } else {
         fireBadge.textContent = 'Safety';
         fireBadge.className = 'badge safety';
     }
+    checkDangerState();
 });
 
 // 2. Lắng nghe Cài đặt Ngưỡng
 onValue(ref(db, 'settings/temp_threshold'), (snapshot) => {
-    if(snapshot.exists()) tempThresholdInput.value = snapshot.val();
+    if(snapshot.exists()) {
+        thTemp = snapshot.val();
+        tempThresholdInput.value = thTemp;
+        checkDangerState(); // Cập nhật lại trạng thái nếu bị đổi ngưỡng
+    }
 });
 
 onValue(ref(db, 'settings/gas_threshold'), (snapshot) => {
-    if(snapshot.exists()) gasThresholdInput.value = snapshot.val();
+    if(snapshot.exists()) {
+        thGas = snapshot.val();
+        gasThresholdInput.value = thGas;
+        checkDangerState();
+    }
 });
 
 // 3. Lắng nghe Chế độ và cập nhật UI
@@ -192,8 +202,11 @@ Object.keys(outputDevices).forEach(key => {
     });
 });
 
+// ==========================================
+// TÍNH NĂNG ĐỒNG HỒ
+// ==========================================
 function updateClockAndGreeting() {
-    const ownerName = "sown"; // BẠN CÓ THỂ ĐỔI TÊN CHỦ NHÀ Ở ĐÂY
+    const ownerName = "sown"; 
 
     const now = new Date();
     const hours = now.getHours();
@@ -201,10 +214,9 @@ function updateClockAndGreeting() {
     const seconds = String(now.getSeconds()).padStart(2, '0');
     
     const day = String(now.getDate()).padStart(2, '0');
-    const month = String(now.getMonth() + 1).padStart(2, '0'); // Tháng bắt đầu từ 0
+    const month = String(now.getMonth() + 1).padStart(2, '0'); 
     const year = now.getFullYear();
 
-    // 1. Cập nhật câu chào theo khung giờ
     let greetingText = "";
     if (hours >= 5 && hours < 12) {
         greetingText = `🌅 Good morning, ${ownerName}!`;
@@ -215,13 +227,34 @@ function updateClockAndGreeting() {
     }
     document.getElementById('greeting').innerText = greetingText;
 
-    // 2. Cập nhật đồng hồ (Giờ và Ngày)
     document.getElementById('timeText').innerText = `${hours}:${minutes}:${seconds}`;
     document.getElementById('dateText').innerText = `${day}/${month}/${year}`;
 }
 
-// Chạy hàm ngay lập tức khi load trang để tránh bị delay 1 giây đầu
 updateClockAndGreeting();
+setInterval(updateClockAndGreeting, 1000);
 
-// Thiết lập vòng lặp chạy hàm này mỗi 1000ms (1 giây)
-setInterval(updateClockAndGreeting, 1000)
+// ==========================================
+// TÍNH NĂNG ĐĂNG NHẬP (LOGIN)
+// ==========================================
+const VALID_USER = "sown22";
+const VALID_PASS = "012345"; 
+
+document.getElementById('loginBtn').addEventListener('click', function() {
+    const userVal = document.getElementById('username').value;
+    const passVal = document.getElementById('password').value;
+    const errorText = document.getElementById('loginError');
+
+    if (userVal === VALID_USER && passVal === VALID_PASS) {
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('mainDashboard').style.display = 'block';
+    } else {
+        errorText.style.display = 'block';
+    }
+});
+
+document.getElementById('password').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        document.getElementById('loginBtn').click();
+    }
+});

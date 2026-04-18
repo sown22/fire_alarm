@@ -8,7 +8,21 @@
 </head>
 <body>
 
-<div class="dashboard">
+<div id="loginScreen" class="login-container">
+    <div class="login-card">
+        <h2>🔐 Hệ Thống PCCC</h2>
+        <p style="color: #666; margin-bottom: 20px;">Vui lòng đăng nhập để tiếp tục</p>
+        
+        <input type="text" id="username" placeholder="Tên đăng nhập" class="login-input">
+        <input type="password" id="password" placeholder="Mật khẩu" class="login-input">
+        
+        <button id="loginBtn" class="btn-save login-btn">Đăng nhập</button>
+        <p id="loginError" class="error-msg">Sai tài khoản hoặc mật khẩu!</p>
+    </div>
+</div>
+
+<div class="dashboard" id="mainDashboard" style="display: none;">
+    
     <div class="top-header">
         <div id="greeting" class="greeting">Đang tải lời chào...</div>
         <div id="realtimeClock" class="clock">
@@ -16,6 +30,7 @@
             <span id="dateText" class="date-text">--/--/----</span>
         </div>
     </div>
+    
     <h2>🔥 SMART FIRE ALARM SYSTEM 🔥</h2>
 
     <div class="mode-panel">
@@ -90,7 +105,3 @@
 <script type="module" src="script.js"></script>
 </body>
 </html>
-
-
-
-
