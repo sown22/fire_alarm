@@ -258,3 +258,98 @@ document.getElementById('password').addEventListener('keypress', function(e) {
         document.getElementById('loginBtn').click();
     }
 });
+
+// ==========================================
+// TÍNH NĂNG CHỌN WIFI
+// ==========================================
+let selectedSSID = '';
+
+const scanWifiBtn       = document.getElementById('scanWifiBtn');
+const wifiList          = document.getElementById('wifiList');
+const wifiConnectForm   = document.getElementById('wifiConnectForm');
+const selectedSSIDLabel = document.getElementById('selectedSSIDLabel');
+const wifiPasswordInput = document.getElementById('wifiPasswordInput');
+const connectWifiBtn    = document.getElementById('connectWifiBtn');
+const cancelWifiBtn     = document.getElementById('cancelWifiBtn');
+const currentSSIDEl     = document.getElementById('currentSSID');
+const wifiStatusEl      = document.getElementById('wifiStatus');
+
+// Lắng nghe trạng thái WiFi hiện tại từ Firebase
+onValue(ref(db, 'wifi/current_ssid'), (snapshot) => {
+    currentSSIDEl.textContent = snapshot.val() || '--';
+});
+
+onValue(ref(db, 'wifi/status'), (snapshot) => {
+    const status = snapshot.val() || '--';
+    wifiStatusEl.textContent = status;
+    wifiStatusEl.className   = 'wifi-status-badge ' + status;
+});
+
+// Nút Scan → đọc danh sách từ Firebase và hiển thị
+scanWifiBtn.addEventListener('click', () => {
+    wifiList.innerHTML = '<p class="wifi-empty">⏳ Đang tải danh sách...</p>';
+    wifiConnectForm.style.display = 'none';
+
+    onValue(ref(db, 'wifi/available_networks'), (snapshot) => {
+        const networks = snapshot.val();
+        wifiList.innerHTML = '';
+
+        if (!networks || networks.length === 0) {
+            wifiList.innerHTML = '<p class="wifi-empty">Không tìm thấy mạng nào.</p>';
+            return;
+        }
+
+        networks.forEach(ssid => {
+            const item = document.createElement('div');
+            item.className = 'wifi-item' + (ssid === currentSSIDEl.textContent ? ' active' : '');
+            item.innerHTML = `
+                <span class="wifi-item-icon">📶</span>
+                <span class="wifi-item-name">${ssid}</span>
+                ${ssid === currentSSIDEl.textContent
+                    ? '<span style="color:var(--safe-color);font-size:0.8em;font-weight:bold;">✓ Đang kết nối</span>'
+                    : '<span style="color:#aaa;font-size:0.8em;">Nhấn để kết nối</span>'}
+            `;
+
+            item.addEventListener('click', () => {
+                selectedSSID = ssid;
+                selectedSSIDLabel.textContent = ssid;
+                wifiPasswordInput.value       = '';
+                wifiConnectForm.style.display = 'block';
+                wifiPasswordInput.focus();
+            });
+
+            wifiList.appendChild(item);
+        });
+    }, { onlyOnce: true }); // Chỉ đọc 1 lần khi bấm Scan
+});
+
+// Nút Kết nối → ghi target lên Firebase
+connectWifiBtn.addEventListener('click', () => {
+    const pass = wifiPasswordInput.value;
+
+    if (!selectedSSID) {
+        alert('Vui lòng chọn một mạng WiFi!');
+        return;
+    }
+
+    if (pass.length < 8 && pass.length > 0) {
+        alert('Mật khẩu WiFi phải có ít nhất 8 ký tự!');
+        return;
+    }
+
+    set(ref(db, 'wifi/target_ssid'),     selectedSSID);
+    set(ref(db, 'wifi/target_password'), pass);
+    set(ref(db, 'wifi/status'),          'connecting');
+
+    wifiStatusEl.textContent = 'connecting';
+    wifiStatusEl.className   = 'wifi-status-badge connecting';
+    wifiConnectForm.style.display = 'none';
+
+    alert(`⏳ Đang kết nối tới "${selectedSSID}"...\nVui lòng chờ khoảng 10 giây.`);
+});
+
+// Nút Huỷ
+cancelWifiBtn.addEventListener('click', () => {
+    wifiConnectForm.style.display = 'none';
+    selectedSSID = '';
+});

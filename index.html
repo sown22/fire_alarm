@@ -10,21 +10,21 @@
 
 <div id="loginScreen" class="login-container">
     <div class="login-card">
-        <h2>🔐 Hệ Thống PCCC</h2>
-        <p style="color: #666; margin-bottom: 20px;">Vui lòng đăng nhập để tiếp tục</p>
+        <h2>🔐Fire Alarm System</h2>
+        <p style="color: #666; margin-bottom: 20px;">Login to continue</p>
         
-        <input type="text" id="username" placeholder="Tên đăng nhập" class="login-input">
-        <input type="password" id="password" placeholder="Mật khẩu" class="login-input">
+        <input type="text" id="username" placeholder="User" class="login-input">
+        <input type="password" id="password" placeholder="Pass" class="login-input">
         
-        <button id="loginBtn" class="btn-save login-btn">Đăng nhập</button>
-        <p id="loginError" class="error-msg">Sai tài khoản hoặc mật khẩu!</p>
+        <button id="loginBtn" class="btn-save login-btn">Login</button>
+        <p id="loginError" class="error-msg">User or pass was fail!</p>
     </div>
 </div>
 
 <div class="dashboard" id="mainDashboard" style="display: none;">
     
     <div class="top-header">
-        <div id="greeting" class="greeting">Đang tải lời chào...</div>
+        <div id="greeting" class="greeting">Loading...</div>
         <div id="realtimeClock" class="clock">
             <span id="timeText" class="time-text">--:--:--</span>
             <span id="dateText" class="date-text">--/--/----</span>
@@ -41,7 +41,32 @@
         </select>
         <p class="note">Note: Manual mode is only used for testing and maintenance system.</p>
     </div>
+    <h3 class="section-title">📶 WiFi Settings</h3>
+    <div class="card wifi-panel">
+        <div class="wifi-status-bar">
+            <span>Current network: </span>
+            <span id="currentSSID" class="wifi-current-badge">--</span>
+            <span id="wifiStatus" class="wifi-status-badge">--</span>
+            <button id="scanWifiBtn" class="btn-save btn-scan">🔄 Scan</button>
+        </div>
 
+        <div id="wifiList" class="wifi-list">
+            <p class="wifi-empty">Nhấn Scan để tìm kiếm mạng WiFi...</p>
+        </div>
+
+        <!-- Form nhập password -->
+        <div id="wifiConnectForm" class="wifi-connect-form" style="display:none;">
+            <div class="wifi-form-header">
+                <span>🔒 Kết nối tới: </span>
+                <strong id="selectedSSIDLabel">--</strong>
+            </div>
+            <div class="input-group">
+                <input type="password" id="wifiPasswordInput" placeholder="Nhập mật khẩu WiFi" class="wifi-pass-input">
+                <button id="connectWifiBtn" class="btn-save">Kết nối</button>
+                <button id="cancelWifiBtn" class="btn-cancel">Huỷ</button>
+            </div>
+        </div>
+    </div>
     <h3 class="section-title">⚙️ Set Alert Threshold</h3>
     <div class="grid-container">
         <div class="card threshold-card">
@@ -105,3 +130,5 @@
 <script type="module" src="script.js"></script>
 </body>
 </html>
+
+
