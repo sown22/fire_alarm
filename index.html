@@ -25,9 +25,12 @@
     
     <div class="top-header">
         <div id="greeting" class="greeting">Loading...</div>
-        <div id="realtimeClock" class="clock">
-            <span id="timeText" class="time-text">--:--:--</span>
-            <span id="dateText" class="date-text">--/--/----</span>
+        <div style="display:flex; align-items:center; gap:12px;">
+            <div id="realtimeClock" class="clock">
+                <span id="timeText" class="time-text">--:--:--</span>
+                <span id="dateText" class="date-text">--/--/----</span>
+            </div>
+            <button id="logoutBtn" class="btn-logout">➜]</button>
         </div>
     </div>
     
@@ -41,29 +44,29 @@
         </select>
         <p class="note">Note: Manual mode is only used for testing and maintenance system.</p>
     </div>
-    <h3 class="section-title">📶 WiFi Settings</h3>
+    <h3 class="section-title">🛜 WiFi Settings</h3>
     <div class="card wifi-panel">
         <div class="wifi-status-bar">
             <span>Current network: </span>
             <span id="currentSSID" class="wifi-current-badge">--</span>
             <span id="wifiStatus" class="wifi-status-badge">--</span>
-            <button id="scanWifiBtn" class="btn-save btn-scan">🔄 Scan</button>
+            <button id="scanWifiBtn" class="btn-save btn-scan">↻ Scan</button>
         </div>
 
         <div id="wifiList" class="wifi-list">
-            <p class="wifi-empty">Nhấn Scan để tìm kiếm mạng WiFi...</p>
+            <p class="wifi-empty">Press Scan to search for WiFi networks...</p>
         </div>
 
         <!-- Form nhập password -->
         <div id="wifiConnectForm" class="wifi-connect-form" style="display:none;">
             <div class="wifi-form-header">
-                <span>🔒 Kết nối tới: </span>
+                <span>🔒 Connect to: </span>
                 <strong id="selectedSSIDLabel">--</strong>
             </div>
             <div class="input-group">
-                <input type="password" id="wifiPasswordInput" placeholder="Nhập mật khẩu WiFi" class="wifi-pass-input">
-                <button id="connectWifiBtn" class="btn-save">Kết nối</button>
-                <button id="cancelWifiBtn" class="btn-cancel">Huỷ</button>
+                <input type="password" id="wifiPasswordInput" placeholder="Enter the password" class="wifi-pass-input">
+                <button id="connectWifiBtn" class="btn-save">Connect</button>
+                <button id="cancelWifiBtn" class="btn-cancel">Cancel</button>
             </div>
         </div>
     </div>
@@ -105,7 +108,22 @@
             <p><span id="gasValue">--</span><span class="unit-large"> ppm</span></p>
         </div>
     </div>
-
+    <h3 class="section-title">📋 Sensor History (Last 5)</h3>
+    <div class="card history-panel">
+    <table class="history-table">
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Temperature</th>
+                <th>Gas</th>
+                <th>Fire</th>
+            </tr>
+        </thead>
+        <tbody id="historyBody">
+            <tr><td colspan="4" class="history-empty">No data yet...</td></tr>
+        </tbody>
+    </table>
+    </div>
     <h3 class="section-title">📤 Output Data</h3>
     <div class="grid-container actuator-panel locked" id="actuatorPanel">
         <div class="card actuator">

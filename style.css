@@ -395,7 +395,7 @@ body.danger-mode .dashboard {
 
 .wifi-empty {
     color: #aaa;
-    font-style: italic;
+    font-style: normal;
     text-align: center;
     padding: 20px 0;
 }
@@ -471,3 +471,77 @@ body.danger-mode .dashboard {
 }
 
 .btn-cancel:hover { background-color: #888; }
+
+/* ==========================================
+   LOGOUT BUTTON
+   ========================================== */
+.btn-logout {
+    background: #fff0f0;
+    color: var(--danger-color);
+    border: 2px solid var(--danger-color);
+    padding: 8px 12px;
+    font-size: 1em;
+    font-weight: bold;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+.btn-logout:hover {
+    background: var(--danger-color);
+    color: white;
+}
+
+/* ==========================================
+   SENSOR HISTORY TABLE
+   ========================================== */
+.history-panel {
+    padding: 10px 5px;
+    overflow-x: auto;
+}
+
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95em;
+    
+}
+
+.history-table th {
+    background: white;
+    color: #444;
+    font-weight: 700;
+    padding: 10px 14px;
+    text-align: center;
+    border-bottom: 2px solid #dde3f0;
+}
+
+.history-table td {
+    padding: 10px 14px;
+    text-align: center;
+    border-bottom: 1px solid #f0f0f0;
+    color: #333;
+    font-weight: 500;
+}
+
+.history-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.history-table tbody tr:hover {
+    background: #f9fbff;
+}
+
+/* Dòng mới nhất nổi bật hơn */
+.history-table tbody tr:first-child td {
+    font-weight: 700;
+    color: #1565c0;
+}
+
+.history-empty {
+    color: #aaa;
+    font-style: italic;
+    padding: 20px !important;
+}
+
+.fire-safe  { color: var(--safe-color);   font-weight: bold; }
+.fire-danger { color: var(--danger-color); font-weight: bold; }
