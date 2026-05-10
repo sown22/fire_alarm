@@ -157,6 +157,7 @@ onValue(ref(db, 'sensors/gas'), (snapshot) => {
     currentGas = snapshot.val() || 0;
     gasValueDisplay.textContent = currentGas;
     checkDangerState();
+    pushHistory(currentTemp, currentGas, currentFire);
 });
 
 onValue(ref(db, 'sensors/fire'), (snapshot) => {
@@ -169,6 +170,7 @@ onValue(ref(db, 'sensors/fire'), (snapshot) => {
         fireBadge.className   = 'badge safety';
     }
     checkDangerState();
+    pushHistory(currentTemp, currentGas, currentFire);
 });
 
 // 2. Lắng nghe Cài đặt Ngưỡng
@@ -177,6 +179,7 @@ onValue(ref(db, 'settings/temp_threshold'), (snapshot) => {
         thTemp = snapshot.val();
         tempThresholdInput.value = thTemp;
         checkDangerState();
+        pushHistory(currentTemp, currentGas, currentFire);
     }
 });
 
@@ -185,6 +188,7 @@ onValue(ref(db, 'settings/gas_threshold'), (snapshot) => {
         thGas = snapshot.val();
         gasThresholdInput.value = thGas;
         checkDangerState();
+        pushHistory(currentTemp, currentGas, currentFire);
     }
 });
 
