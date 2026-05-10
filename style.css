@@ -102,14 +102,6 @@ h2
     font-style: italic;
     margin-top: 10px; 
 }
-.note-small 
-{ 
-    font-weight: bold;  
-    color: #222;
-    font-size: small;
-    margin-top: 10px; 
-}
-
 .switch 
 { 
     position: relative; 
