@@ -348,7 +348,8 @@ document.getElementById('logoutBtn').addEventListener('click', function() {
 // ==========================================
 // TÍNH NĂNG CHỌN WIFI
 // ==========================================
-let selectedSSID = '';
+let selectedSSID       = '';
+let currentNetworkList = []; // [FIX 1] Lưu list để re-render khi current_ssid thay đổi
 
 const scanWifiBtn       = document.getElementById('scanWifiBtn');
 const wifiList          = document.getElementById('wifiList');
@@ -360,9 +361,48 @@ const cancelWifiBtn     = document.getElementById('cancelWifiBtn');
 const currentSSIDEl     = document.getElementById('currentSSID');
 const wifiStatusEl      = document.getElementById('wifiStatus');
 
-// Lắng nghe trạng thái WiFi hiện tại từ Firebase
+// [FIX 1] Hàm render list WiFi — dùng chung, luôn đọc currentSSIDEl mới nhất
+function renderWifiList(networks) {
+    wifiList.innerHTML = '';
+
+    if (!networks || networks.length === 0) {
+        wifiList.innerHTML = '<p class="wifi-empty">No network found.</p>';
+        return;
+    }
+
+    networks.forEach(ssid => {
+        const isCurrentNetwork = (ssid === currentSSIDEl.textContent);
+        const item = document.createElement('div');
+        item.className = 'wifi-item' + (isCurrentNetwork ? ' active' : '');
+        item.innerHTML = `
+            <span class="wifi-item-icon">🛜</span>
+            <span class="wifi-item-name">${ssid}</span>
+            ${isCurrentNetwork
+                ? '<span style="color:var(--safe-color);font-size:0.8em;font-weight:bold;">✓ Connected</span>'
+                : '<span style="color:#aaa;font-size:0.8em;">Tap to connect</span>'}
+        `;
+
+        item.addEventListener('click', () => {
+            if (isCurrentNetwork) return;
+            selectedSSID                  = ssid;
+            selectedSSIDLabel.textContent = ssid;
+            wifiPasswordInput.value       = '';
+            wifiConnectForm.style.display = 'block';
+            wifiPasswordInput.focus();
+        });
+
+        wifiList.appendChild(item);
+    });
+}
+
+// [FIX 2] Lắng nghe current_ssid — re-render list nếu đang hiển thị
 onValue(ref(db, 'wifi/current_ssid'), (snapshot) => {
     currentSSIDEl.textContent = snapshot.val() || '--';
+
+    // Nếu list đang hiển thị → render lại để cập nhật ✓ Connected
+    if (currentNetworkList.length > 0) {
+        renderWifiList(currentNetworkList);
+    }
 });
 
 onValue(ref(db, 'wifi/status'), (snapshot) => {
@@ -371,10 +411,11 @@ onValue(ref(db, 'wifi/status'), (snapshot) => {
     wifiStatusEl.className   = 'wifi-status-badge ' + status;
 });
 
-// Nút Scan → đọc danh sách từ Firebase và hiển thị
+// [FIX 3] Nút Scan — chờ scan_result_id khớp rồi mới render
 scanWifiBtn.addEventListener('click', () => {
     wifiList.innerHTML            = '<p class="wifi-empty">⏳ Scanning... Please wait</p>';
     wifiConnectForm.style.display = 'none';
+    currentNetworkList            = []; // reset list cũ
 
     // Tạo ID ngẫu nhiên cho lần scan này
     const myScanId = Math.floor(Math.random() * 900000) + 100000;
@@ -394,37 +435,8 @@ scanWifiBtn.addEventListener('click', () => {
         unsubscribe();
 
         get(ref(db, 'wifi/available_networks')).then((snapshot) => {
-            const networks = snapshot.val();
-            wifiList.innerHTML = '';
-
-            if (!networks || networks.length === 0) {
-                wifiList.innerHTML = '<p class="wifi-empty">No network found.</p>';
-                return;
-            }
-
-            networks.forEach(ssid => {
-                const isCurrentNetwork = (ssid === currentSSIDEl.textContent);
-                const item = document.createElement('div');
-                item.className = 'wifi-item' + (isCurrentNetwork ? ' active' : '');
-                item.innerHTML = `
-                    <span class="wifi-item-icon">🛜</span>
-                    <span class="wifi-item-name">${ssid}</span>
-                    ${isCurrentNetwork
-                        ? '<span style="color:var(--safe-color);font-size:0.8em;font-weight:bold;">✓ Connected</span>'
-                        : '<span style="color:#aaa;font-size:0.8em;">Tap to connect</span>'}
-                `;
-
-                item.addEventListener('click', () => {
-                    if (isCurrentNetwork) return;
-                    selectedSSID                  = ssid;
-                    selectedSSIDLabel.textContent = ssid;
-                    wifiPasswordInput.value       = '';
-                    wifiConnectForm.style.display = 'block';
-                    wifiPasswordInput.focus();
-                });
-
-                wifiList.appendChild(item);
-            });
+            currentNetworkList = snapshot.val() || []; // lưu vào biến
+            renderWifiList(currentNetworkList);         // gọi hàm render
         });
     });
 });
