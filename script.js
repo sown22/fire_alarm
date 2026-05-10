@@ -376,21 +376,22 @@ scanWifiBtn.addEventListener('click', () => {
     wifiList.innerHTML            = '<p class="wifi-empty">⏳ Scanning... Please wait</p>';
     wifiConnectForm.style.display = 'none';
 
-    // Lấy timestamp hiện tại trước khi scan để biết kết quả nào là "mới"
-    const scanStartTime = Date.now();
+    // Tạo ID ngẫu nhiên cho lần scan này
+    const myScanId = Math.floor(Math.random() * 900000) + 100000;
 
-    // Ghi scan_request lên Firebase → ESP32 bắt đầu quét
+    // Ghi scan_id và scan_request lên Firebase
+    set(ref(db, 'wifi/scan_id'),      myScanId);
     set(ref(db, 'wifi/scan_request'), true);
 
-    // Lắng nghe scan_timestamp — chỉ render khi timestamp MỚI HƠN lúc bắt đầu nhấn scan
-    const unsubscribe = onValue(ref(db, 'wifi/scan_timestamp'), (tsSnapshot) => {
-        const scanTimestamp = (tsSnapshot.val() || 0) * 1000; // đổi sang ms
+    // Lắng nghe scan_result_id — chờ ESP32 echo lại đúng ID
+    const unsubscribe = onValue(ref(db, 'wifi/scan_result_id'), (snapshot) => {
+        const resultId = snapshot.val();
 
-        // Bỏ qua nếu đây là timestamp cũ (từ lần scan trước)
-        if (scanTimestamp < scanStartTime) return;
+        // Chưa khớp → tiếp tục chờ
+        if (resultId !== myScanId) return;
 
-        // Timestamp mới → đọc danh sách và render
-        unsubscribe(); // Huỷ lắng nghe timestamp, không cần nữa
+        // Khớp rồi → huỷ lắng nghe và render list
+        unsubscribe();
 
         get(ref(db, 'wifi/available_networks')).then((snapshot) => {
             const networks = snapshot.val();
