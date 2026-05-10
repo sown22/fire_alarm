@@ -373,9 +373,13 @@ onValue(ref(db, 'wifi/status'), (snapshot) => {
 
 // Nút Scan → đọc danh sách từ Firebase và hiển thị
 scanWifiBtn.addEventListener('click', () => {
-    wifiList.innerHTML            = '<p class="wifi-empty">⏳ Loading list...</p>';
+    wifiList.innerHTML            = '<p class="wifi-empty">⏳ Scanning...</p>';
     wifiConnectForm.style.display = 'none';
 
+    // Ghi scan_request lên Firebase → ESP32 sẽ quét và đẩy lên
+    set(ref(db, 'wifi/scan_request'), true);
+
+    // Lắng nghe available_networks cập nhật từ ESP32
     onValue(ref(db, 'wifi/available_networks'), (snapshot) => {
         const networks = snapshot.val();
         wifiList.innerHTML = '';
@@ -398,9 +402,7 @@ scanWifiBtn.addEventListener('click', () => {
             `;
 
             item.addEventListener('click', () => {
-                // Nếu đang kết nối mạng này rồi thì không làm gì
                 if (isCurrentNetwork) return;
-
                 selectedSSID                  = ssid;
                 selectedSSIDLabel.textContent = ssid;
                 wifiPasswordInput.value       = '';
