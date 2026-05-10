@@ -373,46 +373,59 @@ onValue(ref(db, 'wifi/status'), (snapshot) => {
 
 // Nút Scan → đọc danh sách từ Firebase và hiển thị
 scanWifiBtn.addEventListener('click', () => {
-    wifiList.innerHTML            = '<p class="wifi-empty">⏳ Scanning...</p>';
+    wifiList.innerHTML            = '<p class="wifi-empty">⏳ Scanning... Please wait</p>';
     wifiConnectForm.style.display = 'none';
 
-    // Ghi scan_request lên Firebase → ESP32 sẽ quét và đẩy lên
+    // Lấy timestamp hiện tại trước khi scan để biết kết quả nào là "mới"
+    const scanStartTime = Date.now();
+
+    // Ghi scan_request lên Firebase → ESP32 bắt đầu quét
     set(ref(db, 'wifi/scan_request'), true);
 
-    // Lắng nghe available_networks cập nhật từ ESP32
-    onValue(ref(db, 'wifi/available_networks'), (snapshot) => {
-        const networks = snapshot.val();
-        wifiList.innerHTML = '';
+    // Lắng nghe scan_timestamp — chỉ render khi timestamp MỚI HƠN lúc bắt đầu nhấn scan
+    const unsubscribe = onValue(ref(db, 'wifi/scan_timestamp'), (tsSnapshot) => {
+        const scanTimestamp = (tsSnapshot.val() || 0) * 1000; // đổi sang ms
 
-        if (!networks || networks.length === 0) {
-            wifiList.innerHTML = '<p class="wifi-empty">No network found.</p>';
-            return;
-        }
+        // Bỏ qua nếu đây là timestamp cũ (từ lần scan trước)
+        if (scanTimestamp < scanStartTime) return;
 
-        networks.forEach(ssid => {
-            const isCurrentNetwork = (ssid === currentSSIDEl.textContent);
-            const item = document.createElement('div');
-            item.className = 'wifi-item' + (isCurrentNetwork ? ' active' : '');
-            item.innerHTML = `
-                <span class="wifi-item-icon">🛜</span>
-                <span class="wifi-item-name">${ssid}</span>
-                ${isCurrentNetwork
-                    ? '<span style="color:var(--safe-color);font-size:0.8em;font-weight:bold;">✓ Connected</span>'
-                    : '<span style="color:#aaa;font-size:0.8em;">Tap to connect</span>'}
-            `;
+        // Timestamp mới → đọc danh sách và render
+        unsubscribe(); // Huỷ lắng nghe timestamp, không cần nữa
 
-            item.addEventListener('click', () => {
-                if (isCurrentNetwork) return;
-                selectedSSID                  = ssid;
-                selectedSSIDLabel.textContent = ssid;
-                wifiPasswordInput.value       = '';
-                wifiConnectForm.style.display = 'block';
-                wifiPasswordInput.focus();
+        get(ref(db, 'wifi/available_networks')).then((snapshot) => {
+            const networks = snapshot.val();
+            wifiList.innerHTML = '';
+
+            if (!networks || networks.length === 0) {
+                wifiList.innerHTML = '<p class="wifi-empty">No network found.</p>';
+                return;
+            }
+
+            networks.forEach(ssid => {
+                const isCurrentNetwork = (ssid === currentSSIDEl.textContent);
+                const item = document.createElement('div');
+                item.className = 'wifi-item' + (isCurrentNetwork ? ' active' : '');
+                item.innerHTML = `
+                    <span class="wifi-item-icon">🛜</span>
+                    <span class="wifi-item-name">${ssid}</span>
+                    ${isCurrentNetwork
+                        ? '<span style="color:var(--safe-color);font-size:0.8em;font-weight:bold;">✓ Connected</span>'
+                        : '<span style="color:#aaa;font-size:0.8em;">Tap to connect</span>'}
+                `;
+
+                item.addEventListener('click', () => {
+                    if (isCurrentNetwork) return;
+                    selectedSSID                  = ssid;
+                    selectedSSIDLabel.textContent = ssid;
+                    wifiPasswordInput.value       = '';
+                    wifiConnectForm.style.display = 'block';
+                    wifiPasswordInput.focus();
+                });
+
+                wifiList.appendChild(item);
             });
-
-            wifiList.appendChild(item);
         });
-    }, { onlyOnce: true });
+    });
 });
 
 // Nút Kết nối → ghi target lên Firebase
