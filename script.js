@@ -126,6 +126,19 @@ let currentFire = 1;
 let thTemp      = 50;
 let thGas       = 600;
 
+// --- CẤU HÌNH TELEGRAM ---
+const TELEGRAM_TOKEN = "8632276059:AAHIHfQTQDT-OxwZIv6eWygJwRfeYivGCZQ"; 
+const TELEGRAM_CHAT_ID = "8408334921";
+
+function sendTelegramAlert(message) {
+    if (!TELEGRAM_TOKEN || !TELEGRAM_CHAT_ID) return;
+    const url = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(message)}`;
+    
+    fetch(url)
+        .then(response => console.log("[Telegram] Đã gửi thông báo cảnh báo!"))
+        .catch(error => console.error("[Telegram] Lỗi gửi tin nhắn:", error));
+}
+
 // HÀM KIỂM TRA BÁO ĐỘNG VÀ NHÁY MÀN HÌNH
 function checkDangerState() {
     let isDanger = (currentFire === 0 || currentTemp >= thTemp || currentGas >= thGas);
@@ -228,7 +241,7 @@ function renderHistory(historyArr) {
 function pushHistory(temp, gas, fire) {
     const isOverThreshold = (fire === 0 || temp >= thTemp || gas >= thGas);
 
-    // Chỉ ghi khi vừa chuyển từ an toàn → nguy hiểm (tránh ghi trùng liên tục)
+    // Chỉ ghi và thông báo khi vừa chuyển từ an toàn → nguy hiểm (tránh spam)
     if (isOverThreshold && !lastDangerState) {
         lastDangerState = true;
 
@@ -240,10 +253,26 @@ function pushHistory(temp, gas, fire) {
             const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
 
             let reason = [];
-            if (fire === 0)     reason.push('Fire');
-            if (temp >= thTemp) reason.push('High Temp');
-            if (gas >= thGas)   reason.push('High Gas');
+            let vnReason = []; // Mảng tiếng Việt dùng để gửi Telegram cho dễ đọc
+            
+            if (fire === 0) {
+                reason.push('Fire');
+                vnReason.push('Phát hiện có Lửa');
+            }
+            if (temp >= thTemp) {
+                reason.push('High Temp');
+                vnReason.push(`Nhiệt độ cao (${temp}°C)`);
+            }
+            if (gas >= thGas) {
+                reason.push('High Gas');
+                vnReason.push(`Rò rỉ khí Gas (${gas} ppm)`);
+            }
 
+            // --- GỬI THÔNG BÁO QUA TELEGRAM ---
+            const alertMsg = `🚨 CẢNH BÁO NGUY HIỂM 🚨\n\n⚠️ Nguyên nhân: ${vnReason.join(' + ')}\n🕒 Thời gian: ${timeStr}\n\nVui lòng kiểm tra hệ thống ngay lập tức!`;
+            sendTelegramAlert(alertMsg);
+
+            // --- LƯU VÀO DATABASE ---
             history.push({
                 time:        timeStr,
                 temperature: temp,
@@ -257,7 +286,7 @@ function pushHistory(temp, gas, fire) {
         });
     }
 
-    // Reset cờ khi hệ thống an toàn → cho phép ghi lần tiếp theo
+    // Reset cờ khi hệ thống an toàn hoàn toàn → cho phép gửi thông báo lần tiếp theo
     if (!isOverThreshold) {
         lastDangerState = false;
     }
