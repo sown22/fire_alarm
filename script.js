@@ -446,7 +446,7 @@ onValue(ref(db, 'wifi/status'), (snapshot) => {
 
 // [FIX 3] Nút Scan — chờ scan_result_id khớp rồi mới render
 scanWifiBtn.addEventListener('click', () => {
-    wifiList.innerHTML            = '<p class="wifi-empty">⏳ Scanning... Please wait</p>';
+    wifiList.innerHTML            = '<div class="wifi-empty">⏳ Scanning... Please wait</div>';
     wifiConnectForm.style.display = 'none';
     currentNetworkList            = []; // reset list cũ
 
@@ -503,4 +503,34 @@ connectWifiBtn.addEventListener('click', () => {
 cancelWifiBtn.addEventListener('click', () => {
     wifiConnectForm.style.display = 'none';
     selectedSSID = '';
+});
+
+// Thêm biến và hàm kiểm tra kết nối
+let lastUpdateTime = null;
+let connectionCheckInterval = null;
+
+function setDisconnected() {
+    tempValueDisplay.textContent = '--';
+    gasValueDisplay.textContent  = '--';
+    fireBadge.textContent        = '--';
+    fireBadge.className          = 'badge safety';
+    document.body.classList.remove('danger-mode');
+}
+
+// Lắng nghe timestamp
+onValue(ref(db, 'sensors/timestamp'), (snapshot) => {
+    if (snapshot.exists()) {
+        lastUpdateTime = Date.now(); // Ghi lại thời điểm nhận được data mới
+
+        // Reset interval kiểm tra
+        if (connectionCheckInterval) clearInterval(connectionCheckInterval);
+
+        // Sau 10 giây không có data mới → hiển thị --
+        connectionCheckInterval = setInterval(() => {
+            if (Date.now() - lastUpdateTime > 10000) {
+                setDisconnected();
+                clearInterval(connectionCheckInterval);
+            }
+        }, 1000);
+    }
 });
