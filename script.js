@@ -512,7 +512,7 @@ let connectionCheckInterval = null;
 function setDisconnected() {
     tempValueDisplay.textContent = '--';
     gasValueDisplay.textContent  = '--';
-    fireBadge.textContent        = '--';
+    fireBadge.textContent        = 'No Data';
     fireBadge.className          = 'badge safety';
     document.body.classList.remove('danger-mode');
 }
