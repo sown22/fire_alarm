@@ -128,16 +128,23 @@ function checkDangerState() {
     document.body.classList.toggle('danger-mode', isDanger);
 }
 
-// --- 1. LẮNG NGHE NHỊP TIM ESP32 (Quản lý WiFi/IP) ---
+// --- 1. LẮNG NGHE NHỊP TIM ESP32 ---
 onValue(ref(db, 'wifi/timestamp'), (snapshot) => {
-    if (snapshot.exists()) {
-        const newTs = snapshot.val();
-        if (lastEspTimestamp === null) { lastEspTimestamp = newTs; return; }
-        if (newTs !== lastEspTimestamp) {
-            isEspLive = true;
-            lastEspTimestamp = newTs;
-            lastEspUpdateTime = Date.now();
-        }
+    if (!snapshot.exists()) return;
+    isEspLive = true;
+    lastEspTimestamp = snapshot.val();
+    lastEspUpdateTime = Date.now();
+});
+
+// --- WIFI INFO (không cần check isEspLive nữa) ---
+onValue(ref(db, 'wifi/current_ssid'), (snapshot) => {
+    currentSSIDEl.textContent = snapshot.val() || '--';
+});
+
+onValue(ref(db, 'wifi/ip'), (snapshot) => {
+    if (snapshot.val()) {
+        wifiStatusEl.textContent = 'IP: ' + snapshot.val();
+        wifiStatusEl.className = 'wifi-status-badge connected';
     }
 });
 
@@ -290,21 +297,3 @@ function pushHistory(temp, gas, fire) {
 }
 
 onValue(ref(db, 'sensors/history'), (snapshot) => { renderHistory(snapshot.val()); });
-
-// ==========================================
-// TRẠNG THÁI WIFI (HIỂN THỊ IP KHI ONLINE)
-// ==========================================
-onValue(ref(db, 'wifi/current_ssid'), (snapshot) => { 
-    if (isEspLive) currentSSIDEl.textContent = snapshot.val() || '--'; 
-});
-
-// Lắng nghe địa chỉ IP từ Firebase
-onValue(ref(db, 'wifi/ip'), (snapshot) => {
-    if (!isEspLive) return;
-    
-    const ipAddress = snapshot.val();
-    if (ipAddress) {
-        wifiStatusEl.textContent = 'IP: ' + ipAddress; 
-        wifiStatusEl.className = 'wifi-status-badge connected'; // Hiện màu xanh lá
-    }
-});
