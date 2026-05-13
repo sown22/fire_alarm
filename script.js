@@ -76,9 +76,11 @@ let thTemp = 50, thGas = 600;
 let lastReasonString = ""; 
 
 // --- CÁC BIẾN KIỂM SOÁT KẾT NỐI ---
-let isSystemLive = false; 
-let lastTimestamp = null;
-let lastUpdateTime = Date.now();
+let isEspLive = false; // Trạng thái của mạng ESP32
+let isStmLive = false; // Trạng thái của cảm biến STM32
+
+let lastEspTimestamp = null, lastStmTimestamp = null;
+let lastEspUpdateTime = Date.now(), lastStmUpdateTime = Date.now();
 
 const TELEGRAM_TOKEN = "8632276059:AAHIHfQTQDT-OxwZIv6eWygJwRfeYivGCZQ";
 const TELEGRAM_CHAT_ID = "8408334921";
@@ -89,23 +91,27 @@ function sendTelegramAlert(message) {
     fetch(url).catch(error => console.error(error));
 }
 
-// Hàm reset giao diện về mặc định khi chưa có kết nối
-function setDisconnected() {
-    isSystemLive = false; 
+// Reset riêng khung ESP32 (WiFi)
+function setEspDisconnected() {
+    isEspLive = false; 
+    currentSSIDEl.textContent = '--';
+    wifiStatusEl.textContent  = '--';
+    wifiStatusEl.className    = 'wifi-status-badge';
+}
+
+// Reset riêng khung STM32 (Cảm biến)
+function setStmDisconnected() {
+    isStmLive = false; 
     tempValueDisplay.textContent = '--'; 
     gasValueDisplay.textContent  = '--';
     fireBadge.textContent        = 'Chưa có dữ liệu'; 
     fireBadge.className          = 'badge safety'; 
-    
-    currentSSIDEl.textContent    = '--';
-    wifiStatusEl.textContent     = '--';
-    wifiStatusEl.className       = 'wifi-status-badge';
-    
     document.body.classList.remove('danger-mode');
 }
 
-// 💥 GỌI NGAY LẬP TỨC KHI VỪA MỞ TRANG WEB
-setDisconnected();
+// GỌI LẬP TỨC KHI MỞ WEB
+setEspDisconnected();
+setStmDisconnected();
 
 function updateFireUI(state) {
     if (state === 0 || state === false) { 
@@ -122,24 +128,30 @@ function checkDangerState() {
     document.body.classList.toggle('danger-mode', isDanger);
 }
 
-// 1. LẮNG NGHE NHỊP TIM (TIMESTAMP) - MỞ KHÓA GIAO DIỆN
+// --- 1. LẮNG NGHE NHỊP TIM ESP32 (Quản lý WiFi/IP) ---
+onValue(ref(db, 'wifi/timestamp'), (snapshot) => {
+    if (snapshot.exists()) {
+        const newTs = snapshot.val();
+        if (lastEspTimestamp === null) { lastEspTimestamp = newTs; return; }
+        if (newTs !== lastEspTimestamp) {
+            isEspLive = true;
+            lastEspTimestamp = newTs;
+            lastEspUpdateTime = Date.now();
+        }
+    }
+});
+
+// --- 2. LẮNG NGHE NHỊP TIM STM32 (Quản lý Cảm biến) ---
 onValue(ref(db, 'sensors/timestamp'), (snapshot) => {
     if (snapshot.exists()) {
-        const newTimestamp = snapshot.val();
-        
-        // Bỏ qua lần đọc dữ liệu cũ đầu tiên khi vừa mở Web
-        if (lastTimestamp === null) {
-            lastTimestamp = newTimestamp;
-            return; 
-        }
-        
-        // Nếu timestamp thay đổi -> Xác nhận mạch ESP32 đang chạy thực tế
-        if (newTimestamp !== lastTimestamp) {
-            isSystemLive = true;
-            lastTimestamp = newTimestamp;
-            lastUpdateTime = Date.now();
+        const newTs = snapshot.val();
+        if (lastStmTimestamp === null) { lastStmTimestamp = newTs; return; }
+        if (newTs !== lastStmTimestamp) {
+            isStmLive = true;
+            lastStmTimestamp = newTs;
+            lastStmUpdateTime = Date.now();
             
-            // Xóa chữ "--", hiển thị dữ liệu thật lên màn hình
+            // Có tim STM32 mới hiển thị số
             tempValueDisplay.textContent = currentTemp;
             gasValueDisplay.textContent  = currentGas;
             updateFireUI(currentFire);
@@ -147,17 +159,18 @@ onValue(ref(db, 'sensors/timestamp'), (snapshot) => {
     }
 });
 
-// Vòng lặp kiểm tra mất kết nối (nếu sau 10s không có timestamp mới)
+// --- 3. BỘ ĐẾM NGƯỢC (WATCHDOG KÉP) ---
 setInterval(() => {
-    if (isSystemLive && (Date.now() - lastUpdateTime > 10000)) { 
-        setDisconnected(); 
-    }
+    let now = Date.now();
+    // Chờ 10s: Cứ ai mất nhịp tim thì reset riêng người đó về "--"
+    if (isEspLive && (now - lastEspUpdateTime > 10000)) setEspDisconnected();
+    if (isStmLive && (now - lastStmUpdateTime > 10000)) setStmDisconnected();
 }, 1000);
 
 // 2. LẮNG NGHE DỮ LIỆU CẢM BIẾN (CHỈ XỬ LÝ KHI MẠCH ONLINE)
 onValue(ref(db, 'sensors/temperature'), (snapshot) => { 
     currentTemp = snapshot.val() || 0; 
-    if (isSystemLive) {
+    if (isStmLive) {
         tempValueDisplay.textContent = currentTemp; 
         checkDangerState(); 
         pushHistory(currentTemp, currentGas, currentFire); 
@@ -166,7 +179,7 @@ onValue(ref(db, 'sensors/temperature'), (snapshot) => {
 
 onValue(ref(db, 'sensors/gas'), (snapshot) => { 
     currentGas = snapshot.val() || 0; 
-    if (isSystemLive) {
+    if (isStmLive) {
         gasValueDisplay.textContent = currentGas; 
         checkDangerState(); 
         pushHistory(currentTemp, currentGas, currentFire); 
@@ -175,7 +188,7 @@ onValue(ref(db, 'sensors/gas'), (snapshot) => {
 
 onValue(ref(db, 'sensors/fire'), (snapshot) => {
     currentFire = snapshot.val();
-    if (isSystemLive) {
+    if (isStmLive) {
         updateFireUI(currentFire);
         checkDangerState(); 
         pushHistory(currentTemp, currentGas, currentFire);
@@ -186,7 +199,7 @@ onValue(ref(db, 'settings/temp_threshold'), (snapshot) => {
     if (snapshot.exists()) { 
         thTemp = snapshot.val(); 
         tempThresholdInput.value = thTemp; 
-        if (isSystemLive) { checkDangerState(); pushHistory(currentTemp, currentGas, currentFire); }
+        if (isStmLive) { checkDangerState(); pushHistory(currentTemp, currentGas, currentFire); }
     } 
 });
 
@@ -194,7 +207,7 @@ onValue(ref(db, 'settings/gas_threshold'), (snapshot) => {
     if (snapshot.exists()) { 
         thGas = snapshot.val(); 
         gasThresholdInput.value = thGas; 
-        if (isSystemLive) { checkDangerState(); pushHistory(currentTemp, currentGas, currentFire); }
+        if (isStmLive) { checkDangerState(); pushHistory(currentTemp, currentGas, currentFire); }
     } 
 });
 
@@ -282,12 +295,12 @@ onValue(ref(db, 'sensors/history'), (snapshot) => { renderHistory(snapshot.val()
 // TRẠNG THÁI WIFI (HIỂN THỊ IP KHI ONLINE)
 // ==========================================
 onValue(ref(db, 'wifi/current_ssid'), (snapshot) => { 
-    if (isSystemLive) currentSSIDEl.textContent = snapshot.val() || '--'; 
+    if (isEspLive) currentSSIDEl.textContent = snapshot.val() || '--'; 
 });
 
 // Lắng nghe địa chỉ IP từ Firebase
 onValue(ref(db, 'wifi/ip'), (snapshot) => {
-    if (!isSystemLive) return;
+    if (!isEspLive) return;
     
     const ipAddress = snapshot.val();
     if (ipAddress) {
