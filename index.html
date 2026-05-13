@@ -1,104 +1,54 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fire Alarm</title>
+    <title>Hệ thống báo cháy thông minh</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div id="loginScreen" class="login-container">
-    <div class="login-card">
-        <h2>🔐Fire Alarm System</h2>
-        <p style="color: #666; margin-bottom: 20px;">Login to continue</p>
-        
-        <input type="text" id="username" placeholder="User" class="login-input">
-        <input type="password" id="password" placeholder="Pass" class="login-input">
-        
-        <button id="loginBtn" class="btn-save login-btn">Login</button>
-        <p id="loginError" class="error-msg">User or pass was fail!</p>
-    </div>
-</div>
-
-<div class="dashboard" id="mainDashboard" style="display: none;">
-    
-    <div class="top-header">
-        <div id="greeting" class="greeting">Loading...</div>
-        <div style="display:flex; align-items:center; gap:12px;">
-            <div id="realtimeClock" class="clock">
-                <span id="timeText" class="time-text">--:--:--</span>
-                <span id="dateText" class="date-text">--/--/----</span>
-            </div>
-            <button id="logoutBtn" class="btn-logout">➜]</button>
-        </div>
-    </div>
-    
-    <h2>🔥 SMART FIRE ALARM SYSTEM 🔥</h2>
-
-    <div class="mode-panel">
-        <h3>Mode</h3>
-        <select id="modeSelect" class="mode-dropdown mode-auto">
-            <option value="auto">AUTO</option>
-            <option value="manual">MANUAL</option>
-        </select>
-        <p class="note">Note: Manual mode is only used for testing and maintenance system.</p>
-    </div>
-    <h3 class="section-title">🛜 WiFi Settings</h3>
+<div class="dashboard" id="mainDashboard">
+    <p><strong>Đồ án tốt nghiệp - Hoàng Minh Sơn - 2022605869</strong></p>
+    <br>
+    <h2>🔥 HỆ THỐNG BÁO CHÁY THÔNG MINH 🔥</h2>
+    <h3 class="section-title">🛜 Thông tin kết nối</h3>
     <div class="card wifi-panel">
-        <div class="wifi-status-bar">
-            <span>Current network: </span>
+        <div class="wifi-status-bar" style="margin-bottom: 0; justify-content: center;">
             <span id="currentSSID" class="wifi-current-badge">--</span>
             <span id="wifiStatus" class="wifi-status-badge">--</span>
-            <button id="scanWifiBtn" class="btn-save btn-scan">↻ Scan</button>
-        </div>
-
-        <div id="wifiList" class="wifi-list">
-            <div class="wifi-empty">Press Scan to search for WiFi networks...</div>
-        </div>
-
-        <!-- Form nhập password -->
-        <div id="wifiConnectForm" class="wifi-connect-form" style="display:none;">
-            <div class="wifi-form-header">
-                <span>🔒 Connect to: </span>
-                <strong id="selectedSSIDLabel">--</strong>
-            </div>
-            <div class="input-group">
-                <input type="password" id="wifiPasswordInput" placeholder="Enter the password" class="wifi-pass-input">
-                <button id="connectWifiBtn" class="btn-save">Connect</button>
-                <button id="cancelWifiBtn" class="btn-cancel">Cancel</button>
-            </div>
         </div>
     </div>
-    <h3 class="section-title">⚙️ Set Alert Threshold</h3>
-    <div class="grid-container">
+
+    <h3 class="section-title">⚙️ Cài đặt ngưỡng cảnh báo</h3>
+    <div class="output-grid">
         <div class="card threshold-card">
-            <h4>Temperature threshold</h4>
+            <h4>Ngưỡng nhiệt độ</h4>
             <div class="input-group">
                 <input type="number" id="tempThresholdInput" value="50" min="0" max="100">
                 <span class="unit">°C</span>
-                <button id="saveTempBtn" class="btn-save">Save</button>
+                <button id="saveTempBtn" class="btn-save">Lưu</button>
             </div>
         </div>
         
         <div class="card threshold-card">
-            <h4>Gas threshold</h4>
+            <h4>Ngưỡng khí gas</h4>
             <div class="input-group">
                 <input type="number" id="gasThresholdInput" value="600" min="0" max="1000">
                 <span class="unit">ppm</span>
-                <button id="saveGasBtn" class="btn-save">Save</button>
+                <button id="saveGasBtn" class="btn-save">Lưu</button>
             </div>
         </div>
     </div>
 
-    <h3 class="section-title">📊 Sensor Data</h3>
+    <h3 class="section-title">📊 Dữ liệu cảm biến</h3>
     <div class="grid-container">
         <div class="card">
-            <h3>Fire</h3>
-            <div id="fireBadge" class="badge safety">No Data</div>
+            <h3>Lửa</h3>
+            <div id="fireBadge" class="badge safety">Chưa có dữ liệu</div>
         </div>
         <div class="card">
-            <h3>Temperature</h3>
+            <h3>Nhiệt độ</h3>
             <p><span id="tempValue">--</span><span class="unit-large"> °C</span></p>
         </div>
         <div class="card">
@@ -106,40 +56,53 @@
             <p><span id="gasValue">--</span><span class="unit-large"> ppm</span></p>
         </div>
     </div>
-    <h3 class="section-title">📋 Sensor History</h3>
+
+    <h3 class="section-title">📋 Lịch sử cảnh báo</h3>
     <div class="card history-panel">
-    <table class="history-table">
-        <thead>
-            <tr>
-                <th>Time</th>
-                <th>Temperature</th>
-                <th>Gas</th>
-                <th>Fire</th>
-                <th>Reason</th>
-            </tr>
-        </thead>
-        <tbody id="historyBody">
-            <tr><td colspan="4" class="history-empty">No data yet...</td></tr>
-        </tbody>
-    </table>
+        <table class="history-table">
+            <thead>
+                <tr>
+                    <th>Thời gian</th>
+                    <th>Nhiệt độ</th>
+                    <th>Khí gas</th>
+                    <th>Lửa</th>
+                    <th>Nguyên nhân</th>
+                </tr>
+            </thead>
+            <tbody id="historyBody">
+                <tr><td colspan="5" class="history-empty">Chưa có dữ liệu...</td></tr>
+            </tbody>
+        </table>
     </div>
-    <h3 class="section-title">📤 Output Data</h3>
-    <div class="grid-container actuator-panel locked" id="actuatorPanel">
-        <div class="card actuator">
-            <h3>Alarm Led</h3>
-            <label class="switch"><input type="checkbox" id="toggleLed" disabled><span class="slider"></span></label>
+
+    <h3 class="section-title">🚨 Nút nhấn khẩn cấp</h3>
+    <div class="output-grid">
+        <div class="card" style="grid-column: 1 / -1;">
+            <h3>Báo động</h3>
+            <label class="switch">
+                <input type="checkbox" id="toggleEmergency">
+                <span class="slider"></span>
+            </label>
         </div>
-        <div class="card actuator">
-            <h3>Buzzer</h3>
-            <label class="switch"><input type="checkbox" id="toggleBuzzer" disabled><span class="slider"></span></label>
+    </div>
+
+    <h3 class="section-title">📤 Trạng thái thiết bị</h3>
+    <div class="output-grid">
+        <div class="card">
+            <h3>Đèn cảnh báo</h3>
+            <div id="statusLed" class="status-badge off">TẮT</div>
         </div>
-        <div class="card actuator">
-            <h3>Relay 1 (Fan)</h3>
-            <label class="switch"><input type="checkbox" id="toggleRelay1" disabled><span class="slider"></span></label>
+        <div class="card">
+            <h3>Còi</h3>
+            <div id="statusBuzzer" class="status-badge off">TẮT</div>
         </div>
-        <div class="card actuator">
-            <h3>Relay 2 (Pump)</h3>
-            <label class="switch"><input type="checkbox" id="toggleRelay2" disabled><span class="slider"></span></label>
+        <div class="card">
+            <h3>Quạt</h3>
+            <div id="statusRelay1" class="status-badge off">TẮT</div>
+        </div>
+        <div class="card">
+            <h3>Bơm</h3>
+            <div id="statusRelay2" class="status-badge off">TẮT</div>
         </div>
     </div>
 </div>

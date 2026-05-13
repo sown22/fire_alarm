@@ -1,8 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-const firebaseConfig =
-{
+const firebaseConfig = {
     apiKey: "AIzaSyAPp8MJzki1YOGL3tMoqb5mEbReYAvP7gk",
     authDomain: "firealarmsystem-3d6b0.firebaseapp.com",
     databaseURL: "https://firealarmsystem-3d6b0-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -15,522 +14,284 @@ const db  = getDatabase(app);
 // =========================================================
 // PHẦN 2: ÁNH XẠ PHẦN TỬ GIAO DIỆN (DOM)
 // =========================================================
-const modeSelect        = document.getElementById('modeSelect');
-const actuatorPanel     = document.getElementById('actuatorPanel');
-const fireBadge         = document.getElementById('fireBadge');
-const tempValueDisplay  = document.getElementById('tempValue');
-const gasValueDisplay   = document.getElementById('gasValue');
+const fireBadge          = document.getElementById('fireBadge');
+const tempValueDisplay   = document.getElementById('tempValue');
+const gasValueDisplay    = document.getElementById('gasValue');
 const tempThresholdInput = document.getElementById('tempThresholdInput');
 const gasThresholdInput  = document.getElementById('gasThresholdInput');
-const saveTempBtn       = document.getElementById('saveTempBtn');
-const saveGasBtn        = document.getElementById('saveGasBtn');
+const saveTempBtn        = document.getElementById('saveTempBtn');
+const saveGasBtn         = document.getElementById('saveGasBtn');
+const toggleEmergency    = document.getElementById('toggleEmergency');
+const currentSSIDEl      = document.getElementById('currentSSID');
+const wifiStatusEl       = document.getElementById('wifiStatus');
 
-const outputDevices =
-{
-    led:    document.getElementById('toggleLed'),
-    buzzer: document.getElementById('toggleBuzzer'),
-    relay1: document.getElementById('toggleRelay1'),
-    relay2: document.getElementById('toggleRelay2')
+const outputIndicators = {
+    led:    document.getElementById('statusLed'),
+    buzzer: document.getElementById('statusBuzzer'),
+    relay1: document.getElementById('statusRelay1'),
+    relay2: document.getElementById('statusRelay2')
 };
 
 // =========================================================
 // PHẦN 3: GỬI LỆNH TỪ WEB LÊN FIREBASE (WRITE)
 // =========================================================
-
-// 1. Lưu Ngưỡng Cảnh Báo
 saveTempBtn.addEventListener('click', () => {
     let newVal = parseFloat(tempThresholdInput.value);
-    switch (true) {
-        case (isNaN(newVal)):
-            alert("Error: Please enter a valid number!");
-            tempThresholdInput.focus();
-            break;
-
-        case (newVal < 0 || newVal > 100):
-            alert("Error: The temperature threshold must be within the range of 0 to 100 °C!");
-            tempThresholdInput.value = "";
-            tempThresholdInput.focus();
-            break;
-
-        default:
-            set(ref(db, 'settings/temp_threshold'), newVal)
-                .then(() => alert(`Temperature threshold has been saved: ${newVal}°C to Firebase`));
-            break;
-    }
+    if (isNaN(newVal)) { alert("Lỗi: Vui lòng nhập lại!"); tempThresholdInput.focus(); return; }
+    if (newVal < 0 || newVal > 100) { alert("Lỗi: Ngưỡng nhiệt độ phải từ 0 đến 150 °C!"); tempThresholdInput.value = ""; return; }
+    set(ref(db, 'settings/temp_threshold'), newVal).then(() => alert(`Đã lưu ngưỡng nhiệt độ: ${newVal}°C`));
 });
 
 saveGasBtn.addEventListener('click', () => {
     let newVal = parseFloat(gasThresholdInput.value);
-    switch (true) {
-        case (isNaN(newVal)):
-            alert("Error: Please enter a valid number!");
-            gasThresholdInput.focus();
-            break;
-
-        case (newVal < 0 || newVal > 1000):
-            alert("Error: The gas threshold must be within the range of 0 to 1000 ppm!");
-            gasThresholdInput.value = "";
-            gasThresholdInput.focus();
-            break;
-
-        default:
-            set(ref(db, 'settings/gas_threshold'), newVal)
-                .then(() => alert(`Gas threshold has been saved: ${newVal} ppm to Firebase`));
-            break;
-    }
+    if (isNaN(newVal)) { alert("Lỗi: Vui lòng nhập một số hợp lệ!"); gasThresholdInput.focus(); return; }
+    if (newVal < 0 || newVal > 1000) { alert("Lỗi: Ngưỡng khí gas phải từ 0 đến 1000 ppm!"); gasThresholdInput.value = ""; return; }
+    set(ref(db, 'settings/gas_threshold'), newVal).then(() => alert(`Đã lưu ngưỡng khí gas: ${newVal} ppm`));
 });
 
-// Hiệu ứng đổi màu viền ô nhập
 tempThresholdInput.addEventListener('input', function() {
     let val = parseFloat(this.value);
-    if (val < 0 || val > 100) {
-        this.style.borderColor = "red"; this.style.color = "red"; this.style.outline = "none";
-    } else {
-        this.style.borderColor = "#ccc"; this.style.color = "inherit";
-    }
+    if (val < 0 || val > 100) { this.style.borderColor = "red"; this.style.color = "red"; } 
+    else { this.style.borderColor = "#ccc"; this.style.color = "inherit"; }
 });
 
 gasThresholdInput.addEventListener('input', function() {
     let val = parseFloat(this.value);
-    if (val < 0 || val > 1000) {
-        this.style.borderColor = "red"; this.style.color = "red"; this.style.outline = "none";
-    } else {
-        this.style.borderColor = "#ccc"; this.style.color = "inherit";
-    }
+    if (val < 0 || val > 1000) { this.style.borderColor = "red"; this.style.color = "red"; } 
+    else { this.style.borderColor = "#ccc"; this.style.color = "inherit"; }
 });
 
-// 2. Chuyển đổi Chế độ Auto/Manual
-modeSelect.addEventListener('change', function() {
-    const selectedMode = this.value;
-    set(ref(db, 'system/mode'), selectedMode);
+// Gửi lệnh ON/OFF khi gạt nút trên Web
+toggleEmergency.addEventListener('change', function() {
+    const state = this.checked ? 'ON' : 'OFF';
+    set(ref(db, 'system/web_emergency'), state);
 });
 
-// 3. Bật/Tắt thiết bị
-Object.keys(outputDevices).forEach(key => {
-    outputDevices[key].addEventListener('change', function() {
-        if (modeSelect.value === 'manual') {
-            const state = this.checked ? 'ON' : 'OFF';
-            set(ref(db, `devices/${key}`), state);
-        }
-    });
-});
 
 // =========================================================
 // PHẦN 4: LẮNG NGHE DỮ LIỆU TỪ FIREBASE ĐỔ VỀ (READ)
 // =========================================================
+let currentTemp = 0, currentGas = 0, currentFire = 1;
+let thTemp = 50, thGas = 600;
+let lastReasonString = ""; 
 
-// --- BIẾN TOÀN CỤC ---
-let currentTemp = 0;
-let currentGas  = 0;
-let currentFire = 1;
-let thTemp      = 50;
-let thGas       = 600;
+// --- CÁC BIẾN KIỂM SOÁT KẾT NỐI ---
+let isSystemLive = false; 
+let lastTimestamp = null;
+let lastUpdateTime = Date.now();
 
-// --- CẤU HÌNH TELEGRAM ---
-const TELEGRAM_TOKEN = "8632276059:AAHIHfQTQDT-OxwZIv6eWygJwRfeYivGCZQ"; 
+const TELEGRAM_TOKEN = "8632276059:AAHIHfQTQDT-OxwZIv6eWygJwRfeYivGCZQ";
 const TELEGRAM_CHAT_ID = "8408334921";
 
 function sendTelegramAlert(message) {
     if (!TELEGRAM_TOKEN || !TELEGRAM_CHAT_ID) return;
     const url = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(message)}`;
-    
-    fetch(url)
-        .then(response => console.log("[Telegram] Đã gửi thông báo cảnh báo!"))
-        .catch(error => console.error("[Telegram] Lỗi gửi tin nhắn:", error));
+    fetch(url).catch(error => console.error(error));
 }
 
-// HÀM KIỂM TRA BÁO ĐỘNG VÀ NHÁY MÀN HÌNH
+// Hàm reset giao diện về mặc định khi chưa có kết nối
+function setDisconnected() {
+    isSystemLive = false; 
+    tempValueDisplay.textContent = '--'; 
+    gasValueDisplay.textContent  = '--';
+    fireBadge.textContent        = 'Chưa có dữ liệu'; 
+    fireBadge.className          = 'badge safety'; 
+    
+    currentSSIDEl.textContent    = '--';
+    wifiStatusEl.textContent     = '--';
+    wifiStatusEl.className       = 'wifi-status-badge';
+    
+    document.body.classList.remove('danger-mode');
+}
+
+// 💥 GỌI NGAY LẬP TỨC KHI VỪA MỞ TRANG WEB
+setDisconnected();
+
+function updateFireUI(state) {
+    if (state === 0 || state === false) { 
+        fireBadge.textContent = 'Phát hiện'; 
+        fireBadge.className = 'badge danger'; 
+    } else { 
+        fireBadge.textContent = 'Không phát hiện'; 
+        fireBadge.className = 'badge safety'; 
+    }
+}
+
 function checkDangerState() {
-    let isDanger = (currentFire === 0 || currentTemp >= thTemp || currentGas >= thGas);
+    let isDanger = (currentFire === 0 || currentTemp >= thTemp || currentGas >= thGas || toggleEmergency.checked);
     document.body.classList.toggle('danger-mode', isDanger);
 }
 
-// 1. Lắng nghe thông số Cảm biến
-onValue(ref(db, 'sensors/temperature'), (snapshot) => {
-    currentTemp = snapshot.val() || 0;
-    tempValueDisplay.textContent = currentTemp;
-    checkDangerState();
-    pushHistory(currentTemp, currentGas, currentFire);
+// 1. LẮNG NGHE NHỊP TIM (TIMESTAMP) - MỞ KHÓA GIAO DIỆN
+onValue(ref(db, 'sensors/timestamp'), (snapshot) => {
+    if (snapshot.exists()) {
+        const newTimestamp = snapshot.val();
+        
+        // Bỏ qua lần đọc dữ liệu cũ đầu tiên khi vừa mở Web
+        if (lastTimestamp === null) {
+            lastTimestamp = newTimestamp;
+            return; 
+        }
+        
+        // Nếu timestamp thay đổi -> Xác nhận mạch ESP32 đang chạy thực tế
+        if (newTimestamp !== lastTimestamp) {
+            isSystemLive = true;
+            lastTimestamp = newTimestamp;
+            lastUpdateTime = Date.now();
+            
+            // Xóa chữ "--", hiển thị dữ liệu thật lên màn hình
+            tempValueDisplay.textContent = currentTemp;
+            gasValueDisplay.textContent  = currentGas;
+            updateFireUI(currentFire);
+        }
+    }
 });
 
-onValue(ref(db, 'sensors/gas'), (snapshot) => {
-    currentGas = snapshot.val() || 0;
-    gasValueDisplay.textContent = currentGas;
-    checkDangerState();
-    pushHistory(currentTemp, currentGas, currentFire);
+// Vòng lặp kiểm tra mất kết nối (nếu sau 10s không có timestamp mới)
+setInterval(() => {
+    if (isSystemLive && (Date.now() - lastUpdateTime > 10000)) { 
+        setDisconnected(); 
+    }
+}, 1000);
+
+// 2. LẮNG NGHE DỮ LIỆU CẢM BIẾN (CHỈ XỬ LÝ KHI MẠCH ONLINE)
+onValue(ref(db, 'sensors/temperature'), (snapshot) => { 
+    currentTemp = snapshot.val() || 0; 
+    if (isSystemLive) {
+        tempValueDisplay.textContent = currentTemp; 
+        checkDangerState(); 
+        pushHistory(currentTemp, currentGas, currentFire); 
+    }
+});
+
+onValue(ref(db, 'sensors/gas'), (snapshot) => { 
+    currentGas = snapshot.val() || 0; 
+    if (isSystemLive) {
+        gasValueDisplay.textContent = currentGas; 
+        checkDangerState(); 
+        pushHistory(currentTemp, currentGas, currentFire); 
+    }
 });
 
 onValue(ref(db, 'sensors/fire'), (snapshot) => {
     currentFire = snapshot.val();
-    if (currentFire === 0 || currentFire === false) {
-        fireBadge.textContent = 'Danger';
-        fireBadge.className   = 'badge danger';
-    } else {
-        fireBadge.textContent = 'Safety';
-        fireBadge.className   = 'badge safety';
-    }
-    checkDangerState();
-    pushHistory(currentTemp, currentGas, currentFire);
-});
-
-// 2. Lắng nghe Cài đặt Ngưỡng
-onValue(ref(db, 'settings/temp_threshold'), (snapshot) => {
-    if (snapshot.exists()) {
-        thTemp = snapshot.val();
-        tempThresholdInput.value = thTemp;
-        checkDangerState();
+    if (isSystemLive) {
+        updateFireUI(currentFire);
+        checkDangerState(); 
         pushHistory(currentTemp, currentGas, currentFire);
     }
 });
 
-onValue(ref(db, 'settings/gas_threshold'), (snapshot) => {
-    if (snapshot.exists()) {
-        thGas = snapshot.val();
-        gasThresholdInput.value = thGas;
-        checkDangerState();
-        pushHistory(currentTemp, currentGas, currentFire);
-    }
+onValue(ref(db, 'settings/temp_threshold'), (snapshot) => { 
+    if (snapshot.exists()) { 
+        thTemp = snapshot.val(); 
+        tempThresholdInput.value = thTemp; 
+        if (isSystemLive) { checkDangerState(); pushHistory(currentTemp, currentGas, currentFire); }
+    } 
 });
 
-// 3. Lắng nghe Chế độ và cập nhật UI
-onValue(ref(db, 'system/mode'), (snapshot) => {
-    let currentMode = snapshot.val() || 'auto';
-    modeSelect.value = currentMode;
-
-    if (currentMode === 'manual') {
-        modeSelect.className = 'mode-dropdown mode-manual';
-        actuatorPanel.classList.remove('locked');
-        Object.values(outputDevices).forEach(device => device.disabled = false);
-    } else {
-        modeSelect.className = 'mode-dropdown mode-auto';
-        actuatorPanel.classList.add('locked');
-        Object.values(outputDevices).forEach(device => device.disabled = true);
-    }
+onValue(ref(db, 'settings/gas_threshold'), (snapshot) => { 
+    if (snapshot.exists()) { 
+        thGas = snapshot.val(); 
+        gasThresholdInput.value = thGas; 
+        if (isSystemLive) { checkDangerState(); pushHistory(currentTemp, currentGas, currentFire); }
+    } 
 });
 
-// 4. Lắng nghe Trạng thái Thiết bị đầu ra
-Object.keys(outputDevices).forEach(key => {
+// Cập nhật đèn báo Thiết bị Output
+Object.keys(outputIndicators).forEach(key => {
     onValue(ref(db, `devices/${key}`), (snapshot) => {
         let state = snapshot.val();
-        outputDevices[key].checked = (state === 'ON' || state === 1 || state === true);
+        let isOn = (state === 'ON' || state === 1 || state === true);
+        if (isOn) { outputIndicators[key].textContent = "BẬT"; outputIndicators[key].className = "status-badge on"; } 
+        else { outputIndicators[key].textContent = "TẮT"; outputIndicators[key].className = "status-badge off"; }
     });
 });
 
-// ==========================================
-// LỊCH SỬ CẢM BIẾN (5 lần vượt ngưỡng gần nhất)
-// ==========================================
-let lastDangerState = false;
+// Cập nhật trạng thái nút gạt khẩn cấp (ĐỒNG BỘ 2 CHIỀU HOÀN HẢO)
+onValue(ref(db, 'devices/emergency'), (snapshot) => {
+    let state = snapshot.val();
+    let isOn = (state === 'ON' || state === 1 || state === true);
+    
+    // Nếu trạng thái thực tế của mạch KHÁC với cái nút trên Web
+    if (toggleEmergency.checked !== isOn) {
+        // 1. Gạt nút trên giao diện
+        toggleEmergency.checked = isOn; 
+        
+        // 2. Ép luôn biến mệnh lệnh trên Firebase đồng bộ theo thực tế
+        set(ref(db, 'system/web_emergency'), isOn ? 'ON' : 'OFF'); 
+    }
+    
+    checkDangerState(); 
+});
 
+// ==========================================
+// LỊCH SỬ CẢM BIẾN
+// ==========================================
 function renderHistory(historyArr) {
     const tbody = document.getElementById('historyBody');
     if (!historyArr || historyArr.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="history-empty">No threshold exceeded yet...</td></tr>';
-        return;
+        tbody.innerHTML = '<tr><td colspan="5" class="history-empty">Chưa có cảnh báo ...</td></tr>'; return;
     }
-
     const reversed = [...historyArr].reverse();
-    tbody.innerHTML = reversed.map(entry => `
+    tbody.innerHTML = reversed.map(entry => {
+        let formattedReason = entry.reason ? '• ' + entry.reason.split(' + ').join('<br>• ') : '';
+        return `
         <tr>
             <td>${entry.time}</td>
             <td class="${entry.temperature >= thTemp ? 'fire-danger' : ''}">${entry.temperature} °C</td>
             <td class="${entry.gas >= thGas ? 'fire-danger' : ''}">${entry.gas} ppm</td>
             <td class="${entry.fire === 0 ? 'fire-danger' : 'fire-safe'}">
-                ${entry.fire === 0 ? '🔥 Danger' : '✅ Safety'}
+                ${entry.fire === 0 ? 'Phát hiện' : 'Không phát hiện'}
             </td>
-            <td style="color:#e65100; font-weight:600;">${entry.reason}</td>
+            <td class="reason-cell"><div class="reason-box">${formattedReason}</div></td>
         </tr>
-    `).join('');
+        `;
+    }).join('');
 }
 
 function pushHistory(temp, gas, fire) {
     const isOverThreshold = (fire === 0 || temp >= thTemp || gas >= thGas);
+    let vnReason = [];
+    if (fire === 0) vnReason.push('Phát hiện có Lửa');
+    if (temp >= thTemp) vnReason.push(`Nhiệt độ cao (${temp}°C)`);
+    if (gas >= thGas) vnReason.push(`Rò rỉ khí Gas (${gas} ppm)`);
+    const currentReason = vnReason.join(' + ');
 
-    // Chỉ ghi và thông báo khi vừa chuyển từ an toàn → nguy hiểm (tránh spam)
-    if (isOverThreshold && !lastDangerState) {
-        lastDangerState = true;
-
+    if (isOverThreshold && currentReason !== lastReasonString) {
+        lastReasonString = currentReason;
         const historyRef = ref(db, 'sensors/history');
         get(historyRef).then((snapshot) => {
             let history = snapshot.val() || [];
-
-            const now     = new Date();
+            const now = new Date();
             const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
-
-            let reason = [];
-            let vnReason = []; // Mảng tiếng Việt dùng để gửi Telegram cho dễ đọc
             
-            if (fire === 0) {
-                reason.push('Fire');
-                vnReason.push('Phát hiện có Lửa');
-            }
-            if (temp >= thTemp) {
-                reason.push('High Temp');
-                vnReason.push(`Nhiệt độ cao (${temp}°C)`);
-            }
-            if (gas >= thGas) {
-                reason.push('High Gas');
-                vnReason.push(`Rò rỉ khí Gas (${gas} ppm)`);
-            }
-
-            // --- GỬI THÔNG BÁO QUA TELEGRAM ---
-            const alertMsg = `🚨 CẢNH BÁO NGUY HIỂM 🚨\n\n⚠️ Nguyên nhân: ${vnReason.join(' + ')}\n🕒 Thời gian: ${timeStr}\n\nVui lòng kiểm tra hệ thống ngay lập tức!`;
-            sendTelegramAlert(alertMsg);
-
-            // --- LƯU VÀO DATABASE ---
-            history.push({
-                time:        timeStr,
-                temperature: temp,
-                gas:         gas,
-                fire:        fire,
-                reason:      reason.join(', ')
-            });
-
+            sendTelegramAlert(`CẢNH BÁO:\n\n ${currentReason}\n Thời gian: ${timeStr}\n\nVui lòng kiểm tra!`);
+            
+            history.push({ time: timeStr, temperature: temp, gas: gas, fire: fire, reason: currentReason });
             if (history.length > 5) history = history.slice(-5);
             set(historyRef, history);
         });
     }
-
-    // Reset cờ khi hệ thống an toàn hoàn toàn → cho phép gửi thông báo lần tiếp theo
-    if (!isOverThreshold) {
-        lastDangerState = false;
-    }
+    if (!isOverThreshold) lastReasonString = "";
 }
 
-// Lắng nghe lịch sử từ Firebase và render
-onValue(ref(db, 'sensors/history'), (snapshot) => {
-    renderHistory(snapshot.val());
-});
+onValue(ref(db, 'sensors/history'), (snapshot) => { renderHistory(snapshot.val()); });
 
 // ==========================================
-// TÍNH NĂNG ĐỒNG HỒ
+// TRẠNG THÁI WIFI (HIỂN THỊ IP KHI ONLINE)
 // ==========================================
-function updateClockAndGreeting() {
-    const ownerName = "sown";
-
-    const now     = new Date();
-    const hours   = now.getHours();
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
-
-    const day   = String(now.getDate()).padStart(2, '0');
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const year  = now.getFullYear();
-
-    let greetingText = "";
-    if (hours >= 5 && hours < 12) {
-        greetingText = `🌅 Good morning, ${ownerName}!`;
-    } else if (hours >= 12 && hours < 18) {
-        greetingText = `☀️ Good afternoon, ${ownerName}!`;
-    } else {
-        greetingText = `🌙 Good evening, ${ownerName}!`;
-    }
-
-    document.getElementById('greeting').innerText  = greetingText;
-    document.getElementById('timeText').innerText  = `${hours}:${minutes}:${seconds}`;
-    document.getElementById('dateText').innerText  = `${day}/${month}/${year}`;
-}
-
-updateClockAndGreeting();
-setInterval(updateClockAndGreeting, 1000);
-
-// ==========================================
-// TÍNH NĂNG ĐĂNG NHẬP + GHI NHỚ ĐĂNG NHẬP
-// ==========================================
-const VALID_USER = "sown22";
-const VALID_PASS = "012345";
-
-function doLogin() {
-    document.getElementById('loginScreen').style.display  = 'none';
-    document.getElementById('mainDashboard').style.display = 'block';
-}
-
-// Kiểm tra localStorage khi load trang — bỏ qua màn hình login nếu đã đăng nhập
-if (localStorage.getItem('isLoggedIn') === 'true') {
-    doLogin();
-}
-
-document.getElementById('loginBtn').addEventListener('click', function() {
-    const userVal   = document.getElementById('username').value;
-    const passVal   = document.getElementById('password').value;
-    const errorText = document.getElementById('loginError');
-
-    if (userVal === VALID_USER && passVal === VALID_PASS) {
-        localStorage.setItem('isLoggedIn', 'true');
-        doLogin();
-    } else {
-        errorText.style.display = 'block';
-    }
+onValue(ref(db, 'wifi/current_ssid'), (snapshot) => { 
+    if (isSystemLive) currentSSIDEl.textContent = snapshot.val() || '--'; 
 });
 
-document.getElementById('password').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') document.getElementById('loginBtn').click();
-});
-
-// Nút Logout
-document.getElementById('logoutBtn').addEventListener('click', function() {
-    if (confirm('Are you sure you want to logout?')) {
-        localStorage.removeItem('isLoggedIn');
-        document.getElementById('mainDashboard').style.display = 'none';
-        document.getElementById('loginScreen').style.display   = 'flex';
-        document.getElementById('username').value = '';
-        document.getElementById('password').value = '';
-        document.getElementById('loginError').style.display = 'none';
-    }
-});
-
-// ==========================================
-// TÍNH NĂNG CHỌN WIFI
-// ==========================================
-let selectedSSID       = '';
-let currentNetworkList = []; // [FIX 1] Lưu list để re-render khi current_ssid thay đổi
-
-const scanWifiBtn       = document.getElementById('scanWifiBtn');
-const wifiList          = document.getElementById('wifiList');
-const wifiConnectForm   = document.getElementById('wifiConnectForm');
-const selectedSSIDLabel = document.getElementById('selectedSSIDLabel');
-const wifiPasswordInput = document.getElementById('wifiPasswordInput');
-const connectWifiBtn    = document.getElementById('connectWifiBtn');
-const cancelWifiBtn     = document.getElementById('cancelWifiBtn');
-const currentSSIDEl     = document.getElementById('currentSSID');
-const wifiStatusEl      = document.getElementById('wifiStatus');
-
-// [FIX 1] Hàm render list WiFi — dùng chung, luôn đọc currentSSIDEl mới nhất
-function renderWifiList(networks) {
-    wifiList.innerHTML = '';
-
-    if (!networks || networks.length === 0) {
-        wifiList.innerHTML = '<p class="wifi-empty">No network found.</p>';
-        return;
-    }
-
-    networks.forEach(ssid => {
-        const isCurrentNetwork = (ssid === currentSSIDEl.textContent);
-        const item = document.createElement('div');
-        item.className = 'wifi-item' + (isCurrentNetwork ? ' active' : '');
-        item.innerHTML = `
-            <span class="wifi-item-icon">🛜</span>
-            <span class="wifi-item-name">${ssid}</span>
-            ${isCurrentNetwork
-                ? '<span style="color:var(--safe-color);font-size:0.8em;font-weight:bold;">✓ Connected</span>'
-                : '<span style="color:#aaa;font-size:0.8em;">Tap to connect</span>'}
-        `;
-
-        item.addEventListener('click', () => {
-            if (isCurrentNetwork) return;
-            selectedSSID                  = ssid;
-            selectedSSIDLabel.textContent = ssid;
-            wifiPasswordInput.value       = '';
-            wifiConnectForm.style.display = 'block';
-            wifiPasswordInput.focus();
-        });
-
-        wifiList.appendChild(item);
-    });
-}
-
-// [FIX 2] Lắng nghe current_ssid — re-render list nếu đang hiển thị
-onValue(ref(db, 'wifi/current_ssid'), (snapshot) => {
-    currentSSIDEl.textContent = snapshot.val() || '--';
-
-    // Nếu list đang hiển thị → render lại để cập nhật ✓ Connected
-    if (currentNetworkList.length > 0) {
-        renderWifiList(currentNetworkList);
-    }
-});
-
-onValue(ref(db, 'wifi/status'), (snapshot) => {
-    const status = snapshot.val() || '--';
-    wifiStatusEl.textContent = status;
-    wifiStatusEl.className   = 'wifi-status-badge ' + status;
-});
-
-// [FIX 3] Nút Scan — chờ scan_result_id khớp rồi mới render
-scanWifiBtn.addEventListener('click', () => {
-    wifiList.innerHTML            = '<div class="wifi-empty">⏳ Scanning... Please wait</div>';
-    wifiConnectForm.style.display = 'none';
-    currentNetworkList            = []; // reset list cũ
-
-    // Tạo ID ngẫu nhiên cho lần scan này
-    const myScanId = Math.floor(Math.random() * 900000) + 100000;
-
-    // Ghi scan_id và scan_request lên Firebase
-    set(ref(db, 'wifi/scan_id'),      myScanId);
-    set(ref(db, 'wifi/scan_request'), true);
-
-    // Lắng nghe scan_result_id — chờ ESP32 echo lại đúng ID
-    const unsubscribe = onValue(ref(db, 'wifi/scan_result_id'), (snapshot) => {
-        const resultId = snapshot.val();
-
-        // Chưa khớp → tiếp tục chờ
-        if (resultId !== myScanId) return;
-
-        // Khớp rồi → huỷ lắng nghe và render list
-        unsubscribe();
-
-        get(ref(db, 'wifi/available_networks')).then((snapshot) => {
-            currentNetworkList = snapshot.val() || []; // lưu vào biến
-            renderWifiList(currentNetworkList);         // gọi hàm render
-        });
-    });
-});
-
-// Nút Kết nối → ghi target lên Firebase
-connectWifiBtn.addEventListener('click', () => {
-    const pass = wifiPasswordInput.value;
-
-    if (!selectedSSID) {
-        alert('Please select a WiFi network!');
-        return;
-    }
-
-    if (pass.length < 8 && pass.length > 0) {
-        alert('The WiFi password must be at least 8 characters long!');
-        return;
-    }
-
-    set(ref(db, 'wifi/target_ssid'),     selectedSSID);
-    set(ref(db, 'wifi/target_password'), pass);
-    set(ref(db, 'wifi/status'),          'connecting');
-
-    wifiStatusEl.textContent      = 'connecting';
-    wifiStatusEl.className        = 'wifi-status-badge connecting';
-    wifiConnectForm.style.display = 'none';
-
-    alert(`⏳ Connecting to "${selectedSSID}"...\nPlease wait for about 10 seconds...`);
-});
-
-// Nút Huỷ
-cancelWifiBtn.addEventListener('click', () => {
-    wifiConnectForm.style.display = 'none';
-    selectedSSID = '';
-});
-
-// Thêm biến và hàm kiểm tra kết nối
-let lastUpdateTime = null;
-let connectionCheckInterval = null;
-
-function setDisconnected() {
-    tempValueDisplay.textContent = '--';
-    gasValueDisplay.textContent  = '--';
-    fireBadge.textContent        = 'No Data';
-    fireBadge.className          = 'badge safety';
-    document.body.classList.remove('danger-mode');
-}
-
-// Lắng nghe timestamp
-onValue(ref(db, 'sensors/timestamp'), (snapshot) => {
-    if (snapshot.exists()) {
-        lastUpdateTime = Date.now(); // Ghi lại thời điểm nhận được data mới
-
-        // Reset interval kiểm tra
-        if (connectionCheckInterval) clearInterval(connectionCheckInterval);
-
-        // Sau 10 giây không có data mới → hiển thị --
-        connectionCheckInterval = setInterval(() => {
-            if (Date.now() - lastUpdateTime > 10000) {
-                setDisconnected();
-                clearInterval(connectionCheckInterval);
-            }
-        }, 1000);
+// Lắng nghe địa chỉ IP từ Firebase
+onValue(ref(db, 'wifi/ip'), (snapshot) => {
+    if (!isSystemLive) return;
+    
+    const ipAddress = snapshot.val();
+    if (ipAddress) {
+        wifiStatusEl.textContent = 'IP: ' + ipAddress; 
+        wifiStatusEl.className = 'wifi-status-badge connected'; // Hiện màu xanh lá
     }
 });
