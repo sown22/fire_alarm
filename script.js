@@ -131,20 +131,24 @@ function checkDangerState() {
 // --- 1. LẮNG NGHE NHỊP TIM ESP32 ---
 onValue(ref(db, 'wifi/timestamp'), (snapshot) => {
     if (!snapshot.exists()) return;
-    isEspLive = true;
-    lastEspTimestamp = snapshot.val();
-    lastEspUpdateTime = Date.now();
-});
+    const newTs = snapshot.val();
 
-// --- WIFI INFO (không cần check isEspLive nữa) ---
-onValue(ref(db, 'wifi/current_ssid'), (snapshot) => {
-    currentSSIDEl.textContent = snapshot.val() || '--';
-});
+    // Chỉ set live khi timestamp thực sự thay đổi so với lần trước
+    if (newTs !== lastEspTimestamp) {
+        isEspLive = true;
+        lastEspTimestamp = newTs;
+        lastEspUpdateTime = Date.now();
 
-onValue(ref(db, 'wifi/ip'), (snapshot) => {
-    if (snapshot.val()) {
-        wifiStatusEl.textContent = 'IP: ' + snapshot.val();
-        wifiStatusEl.className = 'wifi-status-badge connected';
+        // Chỉ cập nhật UI khi xác nhận ESP đang chạy
+        get(ref(db, 'wifi/current_ssid')).then(s => {
+            currentSSIDEl.textContent = s.val() || '--';
+        });
+        get(ref(db, 'wifi/ip')).then(s => {
+            if (s.val()) {
+                wifiStatusEl.textContent = 'IP: ' + s.val();
+                wifiStatusEl.className = 'wifi-status-badge connected';
+            }
+        });
     }
 });
 
