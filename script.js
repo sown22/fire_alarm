@@ -134,6 +134,13 @@ onValue(ref(db, 'wifi/timestamp'), (snapshot) => {
     const newTs = snapshot.val();
     if (newTs === 0 || newTs === null) return; // ESP chưa online
     
+    // Snapshot dau tien co the la du lieu cu Firebase con luu lai.
+    // Chi coi ESP32 online khi timestamp thay doi sau luc web da mo.
+    if (lastEspTimestamp === null) {
+        lastEspTimestamp = newTs;
+        return;
+    }
+
     if (newTs !== lastEspTimestamp) {
         isEspLive = true;
         lastEspTimestamp = newTs;
