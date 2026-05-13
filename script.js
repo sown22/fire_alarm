@@ -132,14 +132,13 @@ function checkDangerState() {
 onValue(ref(db, 'wifi/timestamp'), (snapshot) => {
     if (!snapshot.exists()) return;
     const newTs = snapshot.val();
-
-    // Chỉ set live khi timestamp thực sự thay đổi so với lần trước
+    if (newTs === 0 || newTs === null) return; // ESP chưa online
+    
     if (newTs !== lastEspTimestamp) {
         isEspLive = true;
         lastEspTimestamp = newTs;
         lastEspUpdateTime = Date.now();
 
-        // Chỉ cập nhật UI khi xác nhận ESP đang chạy
         get(ref(db, 'wifi/current_ssid')).then(s => {
             currentSSIDEl.textContent = s.val() || '--';
         });
@@ -151,7 +150,6 @@ onValue(ref(db, 'wifi/timestamp'), (snapshot) => {
         });
     }
 });
-
 // --- 2. LẮNG NGHE NHỊP TIM STM32 (Quản lý Cảm biến) ---
 onValue(ref(db, 'sensors/timestamp'), (snapshot) => {
     if (snapshot.exists()) {
