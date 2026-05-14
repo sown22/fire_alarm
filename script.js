@@ -21,19 +21,19 @@ const tempThresholdInput = document.getElementById('tempThresholdInput');
 const gasThresholdInput  = document.getElementById('gasThresholdInput');
 const saveTempBtn        = document.getElementById('saveTempBtn');
 const saveGasBtn         = document.getElementById('saveGasBtn');
-const toggleEmergency    = document.getElementById('toggleEmergency');
+const statusEmergency    = document.getElementById('statusEmergency'); // Đã đổi ID cho nút nhấn
 const currentSSIDEl      = document.getElementById('currentSSID');
 const wifiStatusEl       = document.getElementById('wifiStatus');
 
 const outputIndicators = {
     led:    document.getElementById('statusLed'),
     buzzer: document.getElementById('statusBuzzer'),
-    fan:    document.getElementById('statusFan'),
-    pump:   document.getElementById('statusPump')
+    fan:    document.getElementById('statusFan'), // Khớp với HTML mới
+    pump:   document.getElementById('statusPump')  // Khớp với HTML mới
 };
 
 // =========================================================
-// PHẦN 3: GỬI LỆNH TỪ WEB LÊN FIREBASE (WRITE)
+// PHẦN 3: GỬI LỆNH TỪ WEB LÊN FIREBASE (WRITE) - CHỈ CÒN CÀI NGƯỠNG
 // =========================================================
 saveTempBtn.addEventListener('click', () => {
     let newVal = parseFloat(tempThresholdInput.value);
@@ -61,33 +61,7 @@ gasThresholdInput.addEventListener('input', function() {
     else { this.style.borderColor = "#ccc"; this.style.color = "inherit"; }
 });
 
-// ====================================================
-// SỬA LỖI 3: Thêm cờ isUserControlling để chặn
-// feedback loop giữa 'change' event và onValue listener.
-//
-// Vấn đề cũ:
-//   1. User bật toggle → checked=true → ghi Firebase "ON"
-//   2. onValue('devices/emergency') bắn về với giá trị cũ "OFF"
-//   3. Dòng `toggleEmergency.checked = false` reset toggle về OFF ngay lập tức
-//   4. User thấy không có phản ứng gì!
-//
-// Fix: Trong 3 giây sau khi user chủ động thao tác, bỏ qua
-// việc đồng bộ toggle từ Firebase về DOM.
-// ====================================================
-let isUserControlling  = false;
-let userControlTimeout = null;
-
-toggleEmergency.addEventListener('change', function() {
-    // Đánh dấu user đang điều khiển, chặn onValue reset lại toggle
-    isUserControlling = true;
-    clearTimeout(userControlTimeout);
-    userControlTimeout = setTimeout(() => {
-        isUserControlling = false;
-    }, 3000); // Chờ tối đa 3s để STM32 phản hồi về Firebase
-
-    const state = this.checked ? 'ON' : 'OFF';
-    set(ref(db, 'system/web_emergency'), state);
-});
+// (Đã xóa bỏ hoàn toàn phần logic gửi lệnh điều khiển Nút Khẩn Cấp)
 
 // =========================================================
 // PHẦN 4: LẮNG NGHE DỮ LIỆU TỪ FIREBASE ĐỔ VỀ (READ)
@@ -222,6 +196,7 @@ onValue(ref(db, 'settings/gas_threshold'), (snapshot) => {
     }
 });
 
+// --- LẮNG NGHE CÁC CƠ CẤU CHẤP HÀNH (Đèn, còi, quạt, bơm) ---
 Object.keys(outputIndicators).forEach(key => {
     onValue(ref(db, `devices/${key}`), (snapshot) => {
         let isOn = (snapshot.val() === 'ON');
@@ -230,18 +205,18 @@ Object.keys(outputIndicators).forEach(key => {
     });
 });
 
+// --- LẮNG NGHE TRẠNG THÁI NÚT NHẤN TỪ MẠCH (CHỈ ĐỌC) ---
 onValue(ref(db, 'devices/emergency'), (snapshot) => {
     let isOn = (snapshot.val() === 'ON');
     currentEmergency = isOn;
 
-    // ====================================================
-    // SỬA LỖI 3: Chỉ đồng bộ toggle từ Firebase về DOM
-    // khi user KHÔNG đang chủ động điều khiển toggle.
-    // Tránh trường hợp Firebase trả về giá trị cũ ngay lập tức
-    // và reset toggle về trạng thái trước khi STM32 kịp xử lý.
-    // ====================================================
-    if (!isUserControlling) {
-        if (toggleEmergency.checked !== isOn) toggleEmergency.checked = isOn;
+    // Cập nhật giao diện badge
+    if (isOn) {
+        statusEmergency.textContent = "BÁO ĐỘNG";
+        statusEmergency.className = "status-badge on";
+    } else {
+        statusEmergency.textContent = "BÌNH THƯỜNG";
+        statusEmergency.className = "status-badge off";
     }
 
     checkDangerState();

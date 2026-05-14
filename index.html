@@ -12,6 +12,7 @@
     <p><strong>Đồ án tốt nghiệp - Hoàng Minh Sơn - 2022605869</strong></p>
     <br>
     <h2>🔥 HỆ THỐNG BÁO CHÁY THÔNG MINH 🔥</h2>
+    
     <h3 class="section-title">🛜 Thông tin kết nối</h3>
     <div class="card wifi-panel">
         <div class="wifi-status-bar" style="margin-bottom: 0; justify-content: center;">
@@ -75,18 +76,14 @@
         </table>
     </div>
 
-    <h3 class="section-title">🚨 Nút nhấn khẩn cấp</h3>
+    <h3 class="section-title">🚨 Trạng thái nút nhấn khẩn cấp</h3>
     <div class="output-grid">
         <div class="card" style="grid-column: 1 / -1;">
-            <h3>Báo động</h3>
-            <label class="switch">
-                <input type="checkbox" id="toggleEmergency">
-                <span class="slider"></span>
-            </label>
+            <div id="statusEmergency" class="status-badge off">TẮT</div>
         </div>
     </div>
 
-    <h3 class="section-title">📤 Trạng thái thiết bị</h3>
+    <h3 class="section-title">📤 Trạng thái cơ cấu chấp hành</h3>
     <div class="output-grid">
         <div class="card">
             <h3>Đèn cảnh báo</h3>
@@ -98,11 +95,11 @@
         </div>
         <div class="card">
             <h3>Quạt</h3>
-            <div id="statusRelay1" class="status-badge off">TẮT</div>
+            <div id="statusFan" class="status-badge off">TẮT</div>
         </div>
         <div class="card">
             <h3>Bơm</h3>
-            <div id="statusRelay2" class="status-badge off">TẮT</div>
+            <div id="statusPump" class="status-badge off">TẮT</div>
         </div>
     </div>
 </div>
