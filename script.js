@@ -219,8 +219,11 @@ onValue(ref(db, 'devices/emergency'), (snapshot) => {
         statusEmergency.className = "status-badge off";
     }
 
-    checkDangerState();
-    if (isStmLive) pushHistory(currentTemp, currentGas, currentFire);
+    if (isStmLive)
+    { 
+        checkDangerState();
+        pushHistory(currentTemp, currentGas, currentFire);
+    }
 });
 
 // ==========================================
