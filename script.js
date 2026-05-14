@@ -21,16 +21,8 @@ const tempThresholdInput = document.getElementById('tempThresholdInput');
 const gasThresholdInput  = document.getElementById('gasThresholdInput');
 const saveTempBtn        = document.getElementById('saveTempBtn');
 const saveGasBtn         = document.getElementById('saveGasBtn');
-const statusEmergency    = document.getElementById('statusEmergency'); // Đã đổi ID cho nút nhấn
 const currentSSIDEl      = document.getElementById('currentSSID');
 const wifiStatusEl       = document.getElementById('wifiStatus');
-
-const outputIndicators = {
-    led:    document.getElementById('statusLed'),
-    buzzer: document.getElementById('statusBuzzer'),
-    fan:    document.getElementById('statusFan'), // Khớp với HTML mới
-    pump:   document.getElementById('statusPump')  // Khớp với HTML mới
-};
 
 // =========================================================
 // PHẦN 3: GỬI LỆNH TỪ WEB LÊN FIREBASE (WRITE) - CHỈ CÒN CÀI NGƯỠNG
@@ -61,13 +53,10 @@ gasThresholdInput.addEventListener('input', function() {
     else { this.style.borderColor = "#ccc"; this.style.color = "inherit"; }
 });
 
-// (Đã xóa bỏ hoàn toàn phần logic gửi lệnh điều khiển Nút Khẩn Cấp)
-
 // =========================================================
 // PHẦN 4: LẮNG NGHE DỮ LIỆU TỪ FIREBASE ĐỔ VỀ (READ)
 // =========================================================
-let currentTemp      = 0, currentGas = 0, currentFire = 0;
-let currentEmergency = false;
+let currentTemp = 0, currentGas = 0, currentFire = 0;
 let thTemp = 50, thGas = 600;
 
 // --- CÁC BIẾN KIỂM SOÁT KẾT NỐI ---
@@ -116,7 +105,7 @@ function updateFireUI(state) {
 }
 
 function checkDangerState() {
-    let isDanger = (currentFire === 1 || currentTemp >= thTemp || currentGas >= thGas || currentEmergency);
+    let isDanger = (currentFire === 1 || currentTemp >= thTemp || currentGas >= thGas);
     document.body.classList.toggle('danger-mode', isDanger);
 }
 
@@ -196,36 +185,6 @@ onValue(ref(db, 'settings/gas_threshold'), (snapshot) => {
     }
 });
 
-// --- LẮNG NGHE CÁC CƠ CẤU CHẤP HÀNH (Đèn, còi, quạt, bơm) ---
-Object.keys(outputIndicators).forEach(key => {
-    onValue(ref(db, `devices/${key}`), (snapshot) => {
-        let isOn = (snapshot.val() === 'ON');
-        if (isOn) { outputIndicators[key].textContent = "BẬT"; outputIndicators[key].className = "status-badge on"; }
-        else      { outputIndicators[key].textContent = "TẮT"; outputIndicators[key].className = "status-badge off"; }
-    });
-});
-
-// --- LẮNG NGHE TRẠNG THÁI NÚT NHẤN TỪ MẠCH (CHỈ ĐỌC) ---
-onValue(ref(db, 'devices/emergency'), (snapshot) => {
-    let isOn = (snapshot.val() === 'ON');
-    currentEmergency = isOn;
-
-    // Cập nhật giao diện badge
-    if (isOn) {
-        statusEmergency.textContent = "BÁO ĐỘNG";
-        statusEmergency.className = "status-badge on";
-    } else {
-        statusEmergency.textContent = "BÌNH THƯỜNG";
-        statusEmergency.className = "status-badge off";
-    }
-
-    if (isStmLive)
-    { 
-        checkDangerState();
-        pushHistory(currentTemp, currentGas, currentFire);
-    }
-});
-
 // ==========================================
 // LỊCH SỬ CẢM BIẾN & TELEGRAM
 // ==========================================
@@ -254,7 +213,7 @@ function renderHistory(historyArr) {
 let telegramSent = false;
 
 function pushHistory(temp, gas, fire) {
-    const isOverThreshold   = (fire === 1 || temp >= thTemp || gas >= thGas || currentEmergency);
+    const isOverThreshold   = (fire === 1 || temp >= thTemp || gas >= thGas);
     const shouldSaveHistory = (fire === 1 || temp >= thTemp || gas >= thGas);
 
     if (isOverThreshold && !telegramSent) {
@@ -263,7 +222,6 @@ function pushHistory(temp, gas, fire) {
         if (fire === 1)       reasons.push('- Co lua');
         if (temp >= thTemp)   reasons.push('- Nhiet do cao');
         if (gas >= thGas)     reasons.push('- Ro ri gas');
-        if (currentEmergency) reasons.push('- Nhan nut khan cap');
         sendTelegramAlert(`🚨 CANH BAO SU CO:\n${reasons.join('\n')}\n\nVui long kiem tra ngay!`);
     }
 
