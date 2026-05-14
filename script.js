@@ -61,8 +61,30 @@ gasThresholdInput.addEventListener('input', function() {
     else { this.style.borderColor = "#ccc"; this.style.color = "inherit"; }
 });
 
-// Gửi lệnh ON/OFF khi gạt nút trên Web
+// ====================================================
+// SỬA LỖI 3: Thêm cờ isUserControlling để chặn
+// feedback loop giữa 'change' event và onValue listener.
+//
+// Vấn đề cũ:
+//   1. User bật toggle → checked=true → ghi Firebase "ON"
+//   2. onValue('devices/emergency') bắn về với giá trị cũ "OFF"
+//   3. Dòng `toggleEmergency.checked = false` reset toggle về OFF ngay lập tức
+//   4. User thấy không có phản ứng gì!
+//
+// Fix: Trong 3 giây sau khi user chủ động thao tác, bỏ qua
+// việc đồng bộ toggle từ Firebase về DOM.
+// ====================================================
+let isUserControlling  = false;
+let userControlTimeout = null;
+
 toggleEmergency.addEventListener('change', function() {
+    // Đánh dấu user đang điều khiển, chặn onValue reset lại toggle
+    isUserControlling = true;
+    clearTimeout(userControlTimeout);
+    userControlTimeout = setTimeout(() => {
+        isUserControlling = false;
+    }, 3000); // Chờ tối đa 3s để STM32 phản hồi về Firebase
+
     const state = this.checked ? 'ON' : 'OFF';
     set(ref(db, 'system/web_emergency'), state);
 });
@@ -71,7 +93,7 @@ toggleEmergency.addEventListener('change', function() {
 // PHẦN 4: LẮNG NGHE DỮ LIỆU TỪ FIREBASE ĐỔ VỀ (READ)
 // =========================================================
 let currentTemp      = 0, currentGas = 0, currentFire = 0;
-let currentEmergency = false; // Biến JS riêng, không đọc từ DOM
+let currentEmergency = false;
 let thTemp = 50, thGas = 600;
 
 // --- CÁC BIẾN KIỂM SOÁT KẾT NỐI ---
@@ -109,7 +131,6 @@ function setStmDisconnected() {
 setEspDisconnected();
 setStmDisconnected();
 
-// fire === 1 mới là có cháy (đồng bộ STM32 & ESP32)
 function updateFireUI(state) {
     if (state === 1 || state === true) {
         fireBadge.textContent = 'Phát hiện';
@@ -120,8 +141,6 @@ function updateFireUI(state) {
     }
 }
 
-// Dùng biến currentEmergency thay vì toggleEmergency.checked
-// → tránh flash trạng thái sai khi nhiều listener Firebase resolve cùng lúc
 function checkDangerState() {
     let isDanger = (currentFire === 1 || currentTemp >= thTemp || currentGas >= thGas || currentEmergency);
     document.body.classList.toggle('danger-mode', isDanger);
@@ -213,10 +232,20 @@ Object.keys(outputIndicators).forEach(key => {
 
 onValue(ref(db, 'devices/emergency'), (snapshot) => {
     let isOn = (snapshot.val() === 'ON');
-    currentEmergency = isOn;                                               // Cập nhật biến JS trước
-    if (toggleEmergency.checked !== isOn) toggleEmergency.checked = isOn; // Rồi mới sync DOM
+    currentEmergency = isOn;
+
+    // ====================================================
+    // SỬA LỖI 3: Chỉ đồng bộ toggle từ Firebase về DOM
+    // khi user KHÔNG đang chủ động điều khiển toggle.
+    // Tránh trường hợp Firebase trả về giá trị cũ ngay lập tức
+    // và reset toggle về trạng thái trước khi STM32 kịp xử lý.
+    // ====================================================
+    if (!isUserControlling) {
+        if (toggleEmergency.checked !== isOn) toggleEmergency.checked = isOn;
+    }
+
     checkDangerState();
-    if (isStmLive) pushHistory(currentTemp, currentGas, currentFire);      // Trigger Telegram nếu cần
+    if (isStmLive) pushHistory(currentTemp, currentGas, currentFire);
 });
 
 // ==========================================
@@ -244,15 +273,12 @@ function renderHistory(historyArr) {
     }).join('');
 }
 
-// Cờ chống spam Telegram — giống isWarningSent bên ESP32
-// Gửi 1 lần khi có sự cố, reset khi về an toàn
 let telegramSent = false;
 
 function pushHistory(temp, gas, fire) {
     const isOverThreshold   = (fire === 1 || temp >= thTemp || gas >= thGas || currentEmergency);
-    const shouldSaveHistory = (fire === 1 || temp >= thTemp || gas >= thGas); // Nút khẩn cấp không lưu lịch sử
+    const shouldSaveHistory = (fire === 1 || temp >= thTemp || gas >= thGas);
 
-    // Gửi Telegram 1 lần khi có sự cố (tính cả nút khẩn cấp)
     if (isOverThreshold && !telegramSent) {
         telegramSent = true;
         let reasons = [];
@@ -263,10 +289,8 @@ function pushHistory(temp, gas, fire) {
         sendTelegramAlert(`🚨 CANH BAO SU CO:\n${reasons.join('\n')}\n\nVui long kiem tra ngay!`);
     }
 
-    // Reset khi về an toàn
     if (!isOverThreshold) telegramSent = false;
 
-    // Lưu lịch sử chỉ khi cảm biến vượt ngưỡng, không tính nút khẩn cấp
     if (shouldSaveHistory) {
         let vnReason = [];
         if (fire === 1)     vnReason.push('Phát hiện có Lửa');
