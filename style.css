@@ -71,3 +71,49 @@ body.danger-mode .dashboard { box-shadow: 0 0 40px rgba(244, 67, 54, 0.6); borde
 
 .reason-cell { text-align: center !important; vertical-align: middle; }
 .reason-box { display: inline-block; text-align: left; color: #e65100; font-weight: 600; line-height: 1.6; }
+/* ===== RESPONSIVE MOBILE ===== */
+@media (max-width: 600px) {
+    body {
+        padding: 12px;
+    }
+
+    /* Threshold cards: 1 cột thay vì 2 */
+    .output-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Sensor cards: tối đa 2 cột thay vì tràn */
+    .grid-container {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    /* Input group trong threshold card không bị tràn */
+    .input-group {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .input-group input[type="number"] {
+        width: 80px;
+    }
+
+    /* Bảng lịch sử: chữ nhỏ hơn, không bị vỡ */
+    .history-table {
+        font-size: 0.78em;
+    }
+
+    .history-table th,
+    .history-table td {
+        padding: 8px 6px;
+    }
+
+    /* Card chữ nhỏ hơn 1 chút */
+    .card p {
+        font-size: 1.6em;
+    }
+
+    h2 {
+        font-size: 1.3em;
+    }
+}
