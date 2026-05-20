@@ -209,40 +209,64 @@ function renderHistory(historyArr) {
         `;
     }).join('');
 }
-
 let telegramSent = false;
+let activeAlarmSet = new Set(); // có thể chứa: 'fire', 'temp', 'gas'
 
 function pushHistory(temp, gas, fire) {
-    const isOverThreshold   = (fire === 1 || temp >= thTemp || gas >= thGas);
-    const shouldSaveHistory = (fire === 1 || temp >= thTemp || gas >= thGas);
+    // Tính tập hợp cảnh báo hiện tại
+    const currentAlarms = new Set();
+    if (fire === 1)     currentAlarms.add('fire');
+    if (temp >= thTemp) currentAlarms.add('temp');
+    if (gas >= thGas)   currentAlarms.add('gas');
 
-    if (isOverThreshold && !telegramSent) {
+    // Tìm các loại cảnh báo MỚI (chưa có trong lần trước)
+    const newAlarms = [...currentAlarms].filter(a => !activeAlarmSet.has(a));
+
+    // Nếu không có cảnh báo nào mới → không làm gì cả
+    // (kể cả khi vẫn đang cháy, hoặc khi mất bớt 1 loại)
+    if (newAlarms.length === 0) {
+        // Nếu tất cả đã hết → reset để lần sau kích hoạt lại được
+        if (currentAlarms.size === 0) {
+            activeAlarmSet = new Set();
+            telegramSent = false;
+        }
+        return;
+    }
+
+    // Cập nhật tập hợp active
+    activeAlarmSet = new Set(currentAlarms);
+
+    // Gửi Telegram (chỉ khi có cảnh báo mới)
+    if (!telegramSent) {
         telegramSent = true;
         let reasons = [];
-        if (fire === 1)       reasons.push('- Co lua');
-        if (temp >= thTemp)   reasons.push('- Nhiet do cao');
-        if (gas >= thGas)     reasons.push('- Ro ri gas');
+        if (currentAlarms.has('fire')) reasons.push('- Co lua');
+        if (currentAlarms.has('temp')) reasons.push('- Nhiet do cao');
+        if (currentAlarms.has('gas'))  reasons.push('- Ro ri gas');
         sendTelegramAlert(`🚨 CANH BAO SU CO:\n${reasons.join('\n')}\n\nVui long kiem tra ngay!`);
+    } else {
+        // Đã từng gửi rồi, chỉ gửi thêm cho loại mới
+        let newReasons = [];
+        if (newAlarms.includes('fire')) newReasons.push('- Co lua (them moi)');
+        if (newAlarms.includes('temp')) newReasons.push('- Nhiet do cao (them moi)');
+        if (newAlarms.includes('gas'))  newReasons.push('- Ro ri gas (them moi)');
+        sendTelegramAlert(`⚠️ THEM SU CO MOI:\n${newReasons.join('\n')}`);
     }
 
-    if (!isOverThreshold) telegramSent = false;
+    // Ghi lịch sử
+    let vnReason = [];
+    if (currentAlarms.has('fire')) vnReason.push('Phát hiện có Lửa');
+    if (currentAlarms.has('temp')) vnReason.push(`Nhiệt độ cao (${temp}°C)`);
+    if (currentAlarms.has('gas'))  vnReason.push(`Rò rỉ khí Gas (${gas} ppm)`);
 
-    if (shouldSaveHistory) {
-        let vnReason = [];
-        if (fire === 1)     vnReason.push('Phát hiện có Lửa');
-        if (temp >= thTemp) vnReason.push(`Nhiệt độ cao (${temp}°C)`);
-        if (gas >= thGas)   vnReason.push(`Rò rỉ khí Gas (${gas} ppm)`);
-
-        const historyRef = ref(db, 'sensors/history');
-        get(historyRef).then((snapshot) => {
-            let history = snapshot.val() || [];
-            const now = new Date();
-            const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
-            history.push({ time: timeStr, temperature: temp, gas: gas, fire: fire, reason: vnReason.join(' + ') });
-            if (history.length > 5) history = history.slice(-5);
-            set(historyRef, history);
-        });
-    }
+    const historyRef = ref(db, 'sensors/history');
+    get(historyRef).then((snapshot) => {
+        let history = snapshot.val() || [];
+        const now = new Date();
+        const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+        history.push({ time: timeStr, temperature: temp, gas: gas, fire: fire, reason: vnReason.join(' + ') });
+        if (history.length > 5) history = history.slice(-5);
+        set(historyRef, history);
+    });
 }
-
 onValue(ref(db, 'sensors/history'), (snapshot) => { renderHistory(snapshot.val()); });
